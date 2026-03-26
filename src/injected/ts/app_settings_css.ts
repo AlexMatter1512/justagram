@@ -12,7 +12,9 @@ import type { Settings } from '../../types';
     hideExplore: true,
     hideFeed: true,
     hideSuggestedReels: true,
-    hideThreads: true
+    hideThreads: true,
+    hideNotes: true,
+    dmOnlyMode: true
   };
 
   function applyStyles(settings: Settings): void {
@@ -38,7 +40,10 @@ import type { Settings } from '../../types';
   }
 
   // Initial apply
-  applyStyles(data.settings || defaultSettings);
+  applyStyles({
+    ...defaultSettings,
+    ...(data.settings || {})
+  });
 
   // Listen for changes
   window.addEventListener('justagram-settings-changed', (event: any) => {

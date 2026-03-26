@@ -188,10 +188,34 @@
             justify-content: space-between;
             align-items: center;
             padding: 14px 0;
+            border-bottom: 1px solid #363636;
         ">
             <div>
                 <div style="color: white; font-size: 15px;">Notes</div>
                 <div style="color: #8e8e8e; font-size: 12px;">Hide friends note on top of chat list</div>
+            </div>
+            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
+                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
+                <span class="justagram-slider" style="
+                    position: absolute;
+                    cursor: pointer;
+                    top: 0; left: 0; right: 0; bottom: 0;
+                    background-color: #363636;
+                    transition: .3s;
+                    border-radius: 28px;
+                "></span>
+            </label>
+        </div>
+
+        <div class="justagram-toggle-item" data-key="dmOnlyMode" style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+        ">
+            <div>
+                <div style="color: white; font-size: 15px;">DM Only Mode</div>
+                <div style="color: #8e8e8e; font-size: 12px;">Focus on DMs and keep only Notes visible</div>
             </div>
             <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
                 <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">

@@ -1,0 +1,3 @@
+section > div > div:nth-child(2) > div > div:nth-child(2) > div > div:first-child:has(> :nth-child(2)) {
+  display: none !important;
+}

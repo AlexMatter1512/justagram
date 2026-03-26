@@ -24,7 +24,8 @@ import type { Settings } from '../../types';
     hideFeed: true,
     hideSuggestedReels: true,
     hideThreads: true,
-    hideNotes: true
+    hideNotes: true,
+    dmOnlyMode: true
   };
 
   // Save settings by sending message to main app
@@ -127,12 +128,28 @@ import type { Settings } from '../../types';
 
     // Initialize toggles
     const toggleItems = document.querySelectorAll('.justagram-toggle-item');
+    const currentSettings: Settings = {
+      ...defaultSettings,
+      ...(settings || {})
+    };
+
+    function updateToggleVisibility(state: Settings): void {
+      const dmOnlyEnabled = state.dmOnlyMode;
+
+      toggleItems.forEach((item) => {
+        const key = item.getAttribute('data-key') as keyof Settings;
+        if (!key) return;
+
+        const shouldShow = !dmOnlyEnabled || key === 'hideNotes' || key === 'dmOnlyMode';
+        (item as HTMLElement).style.display = shouldShow ? 'flex' : 'none';
+      });
+    }
+
     toggleItems.forEach(function(item) {
       const key = item.getAttribute('data-key') as keyof Settings;
       const slider = item.querySelector('.justagram-slider') as HTMLElement;
 
       // Set initial state from saved settings
-      const currentSettings = settings || defaultSettings;
       const isChecked = currentSettings[key];
       updateSliderStyle(slider, isChecked);
 
@@ -147,10 +164,13 @@ import type { Settings } from '../../types';
         console.log('[JustAgram] Toggle changed:', key, '->', currentSettings[key]);
 
         updateSliderStyle(slider, currentSettings[key]);
+        updateToggleVisibility(currentSettings);
         saveSettings(currentSettings);
         window.dispatchEvent(new CustomEvent('justagram-settings-changed', { detail: currentSettings }));
       });
     });
+
+    updateToggleVisibility(currentSettings);
 
     console.log('[JustAgram] Menu initialized.');
   }

@@ -14,6 +14,7 @@ export type Settings = {
   hideSuggestedReels: boolean;
   hideThreads: boolean;
   hideNotes: boolean;
+  dmOnlyMode: boolean;
 };
 
 /**
