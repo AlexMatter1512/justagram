@@ -45,8 +45,6 @@ import type { Settings } from '../../types';
     }
   }
 
-
-
   // Initialize menu
   function initMenu(): void {
     console.log('[JustAgram] Initializing menu...');
@@ -108,10 +106,12 @@ import type { Settings } from '../../types';
 
 
 
-    // Open menu
-    menuBtn.addEventListener('click', function() {
+    function openMenu(): void {
       (menuOverlay as HTMLElement).style.display = 'flex';
-    });
+    }
+
+    // Open menu
+    menuBtn.addEventListener('click', openMenu);
 
     // Close menu
     closeBtn.addEventListener('click', function() {
