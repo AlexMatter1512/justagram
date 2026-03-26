@@ -22,6 +22,16 @@ export class AssetService {
         return await res.text();
       });
 
+      // Load global css 
+      const globalCSSPromises = AssetManifest.cssGlobal.map(async (fileName) => {
+        const res = await fetch(`injected/css/${fileName}`);
+        if (!res.ok) {
+           console.warn(`[JustAgram] Failed to load global CSS ${fileName}`);
+           return { name: fileName, content: "" };
+        }
+        return { name: fileName, content: await res.text() };
+      });
+
       // Load CSS rules
       const cssPromises = AssetManifest.cssRules.map(async (fileName) => {
         const res = await fetch(`injected/css/rules/${fileName}`);
@@ -42,9 +52,11 @@ export class AssetService {
         return { name: fileName, content: await res.json() };
       });
 
-      const [htmlFiles, scripts, cssFiles, dataFiles] = await Promise.all([
+      // const [htmlFiles, scripts, cssFiles, dataFiles] = await Promise.all([
+      const [htmlFiles, scripts, globalCSSFiles, cssFiles, dataFiles] = await Promise.all([
         Promise.all(htmlPromises),
         Promise.all(scriptPromises),
+        Promise.all(globalCSSPromises),
         Promise.all(cssPromises),
         Promise.all(dataPromises),
       ]);
@@ -59,6 +71,8 @@ export class AssetService {
         const key = file.name.replace('.css', '') as keyof Settings;
         cssRules[key] = file.content;
       });
+
+      const cssGlobal = globalCSSFiles.map(f => f.content).join("\n");
       
       const blockMap = dataFiles.find((f) => f.name === "blockmap.json")?.content || {};
 
@@ -68,6 +82,7 @@ export class AssetService {
         menuButtonHTML,
         menuHTML,
         cssRules,
+        cssGlobal,
         settings: SettingsService.load(),
         blockMap,
         version: AppVersion,

@@ -13,6 +13,7 @@ export type Settings = {
   hideFeed: boolean;
   hideSuggestedReels: boolean;
   hideThreads: boolean;
+  hideNotes: boolean;
 };
 
 /**
@@ -28,6 +29,7 @@ export type CSSRules = Record<keyof Settings, string>;
 export type JustagramData = {
   menuButtonHTML: string;
   menuHTML: string;
+  cssGlobal: string;
   cssRules: CSSRules;
   settings: Settings;
   blockMap: Record<string, string[]>;

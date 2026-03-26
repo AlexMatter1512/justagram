@@ -10,7 +10,8 @@ export class BrowserService {
 
   private static readonly INSTAGRAM_URL = "https://www.instagram.com/direct";
   private static readonly BROWSER_OPTIONS =
-    "location=no,zoom=no,toolbar=no,footer=no,hardwareback=yes,fullscreen=no";
+    // "location=no,zoom=no,toolbar=no,footer=no,hardwareback=yes,fullscreen=no";
+    "location=no,zoom=no,toolbar=no,footer=no,hardwareback=yes,disallowoverscroll=yes";
 
   public static async open(data: LoadedAssets | null): Promise<void> {
     if (!cordova?.InAppBrowser) {
@@ -70,6 +71,7 @@ export class BrowserService {
       console.log("[JustAgram] Page loaded (loadstop):", url);
 
       if (data) {
+        this.injectCSS(data.cssGlobal);
         this.injectData(data);
 
         // Inject scripts after data to ensure they can access it immediately
@@ -99,6 +101,14 @@ export class BrowserService {
     const dataScript = `window.__JUSTAGRAM_DATA__ = ${JSON.stringify(data)};`;
     this.browser.insertScript({ code: dataScript }, () => {
       console.log("[JustAgram] Data injected successfully");
+    });
+  }
+
+  // using browser.insertCSS
+  private static injectCSS(css: string): void {
+    if (!this.browser) return;
+    this.browser.insertCSS({ code: css }, () => {
+      console.log("[JustAgram] CSS injected successfully");
     });
   }
 

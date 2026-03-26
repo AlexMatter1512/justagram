@@ -1,0 +1,3 @@
+div[data-pagelet="IGDInboxThreadListScrollableAreaPagelet"] > :first-child {
+  display: none !important;
+}

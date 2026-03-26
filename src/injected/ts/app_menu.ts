@@ -23,7 +23,8 @@ import type { Settings } from '../../types';
     hideExplore: true,
     hideFeed: true,
     hideSuggestedReels: true,
-    hideThreads: true
+    hideThreads: true,
+    hideNotes: true
   };
 
   // Save settings by sending message to main app
