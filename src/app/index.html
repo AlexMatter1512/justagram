@@ -1,20 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: gap: content:">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src * 'unsafe-inline' 'unsafe-eval' data: gap: content:"
+    />
     <title>JustAgram</title>
-    <link rel="stylesheet" href="app/css/style.css">
-</head>
-<body>
-    <div class="loading-container">
-        <h1>JustAgram</h1>
-        <p>Loading Instagram...</p>
-        <div class="spinner"></div>
-        <button id="launch-btn" disabled style="margin-top: 2rem;">Launch JustAgram</button>
-    </div>
-
+    <link rel="stylesheet" href="app/css/style.css" />
+  </head>
+  <body>
+    <main class="startup">
+      <div class="brand-mark" aria-hidden="true">J</div>
+      <h1>JustAgram</h1>
+      <p class="tagline">Your conversations. Your space.</p>
+      <p id="startup-status" role="status">Opening Instagram…</p>
+      <p id="startup-error" role="alert"></p>
+      <button id="launch-btn" type="button" hidden>Open Instagram</button>
+      <button id="fallback-btn" class="secondary" type="button" hidden>Open Default</button>
+    </main>
     <script src="app/js/main.js"></script>
-</body>
+  </body>
 </html>

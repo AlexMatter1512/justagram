@@ -23,6 +23,18 @@ export type Settings = {
  */
 export type CSSRules = Record<keyof Settings, string>;
 
+export type ProfileState = {
+  profiles: Array<{ id: string; name: string }>;
+  activeId: string;
+  show?: boolean;
+  error?: string;
+};
+
+export type ProfileResponse = ProfileState & {
+  requestId: string;
+  selectedId?: string;
+};
+
 /**
  * Data injected into Instagram's page via window.__JUSTAGRAM_DATA__.
  * Contains all resources needed by the injected script.
@@ -35,6 +47,7 @@ export type JustagramData = {
   settings: Settings;
   blockMap: Record<string, string[]>;
   version: string;
+  profileState?: ProfileState;
 };
 
 /**

@@ -1,0 +1,390 @@
+diff --git a/node_modules/cordova-plugin-inappbrowser/.bun-tag-318cb1073fa5a17e b/.bun-tag-318cb1073fa5a17e
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/cordova-plugin-inappbrowser/.bun-tag-4450141923716ec5 b/.bun-tag-4450141923716ec5
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/cordova-plugin-inappbrowser/.bun-tag-5aa7b8076a46f7e4 b/.bun-tag-5aa7b8076a46f7e4
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/cordova-plugin-inappbrowser/.bun-tag-89b120cdc99aca27 b/.bun-tag-89b120cdc99aca27
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/cordova-plugin-inappbrowser/.bun-tag-a1fd2dcad77c2107 b/.bun-tag-a1fd2dcad77c2107
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/cordova-plugin-inappbrowser/.bun-tag-cf30b307fc1ae838 b/.bun-tag-cf30b307fc1ae838
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/node_modules/cordova-plugin-inappbrowser/.bun-tag-d2eb6efa2634a413 b/.bun-tag-d2eb6efa2634a413
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/plugin.xml b/plugin.xml
+index 35e2400084a44636139f779610d683de29a188a4..88eb97d239be9c9138acadb4c36c634325612be8 100644
+--- a/plugin.xml
++++ b/plugin.xml
+@@ -38,6 +38,7 @@
+ 
+     <!-- android -->
+     <platform name="android">
++        <framework src="androidx.webkit:webkit:1.14.0" />
+         <js-module src="www/inappbrowser.js" name="inappbrowser">
+             <clobbers target="cordova.InAppBrowser.open" />
+         </js-module>
+diff --git a/src/android/InAppBrowser.java b/src/android/InAppBrowser.java
+index a916b5da4b727e3bfeac62b18c0ae306fcf680a3..a93c70574d5e3e89fd2b835287cc01f4f4ae7ff3 100644
+--- a/src/android/InAppBrowser.java
++++ b/src/android/InAppBrowser.java
+@@ -45,7 +45,12 @@ import android.view.WindowManager;
+ import android.view.WindowManager.LayoutParams;
+ import android.view.inputmethod.EditorInfo;
+ import android.view.inputmethod.InputMethodManager;
++import android.view.ViewGroup;
+ import android.webkit.CookieManager;
++import androidx.webkit.ProfileStore;
++import androidx.webkit.WebStorageCompat;
++import androidx.webkit.WebViewCompat;
++import androidx.webkit.WebViewFeature;
+ import android.webkit.HttpAuthHandler;
+ import android.webkit.JavascriptInterface;
+ import android.webkit.SslErrorHandler;
+@@ -122,7 +127,7 @@ public class InAppBrowser extends CordovaPlugin {
+ 
+     private static final int TOOLBAR_HEIGHT = 48;
+ 
+-    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR);
++    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, "profile");
+ 
+     private InAppBrowserDialog dialog;
+     private WebView inAppWebView;
+@@ -162,6 +167,57 @@ public class InAppBrowser extends CordovaPlugin {
+      * @return A PluginResult object with a status and message.
+      */
+     public boolean execute(String action, CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
++        if (action.equals("removeProfile")) {
++            final String profile = args.getString(0);
++            cordova.getActivity().runOnUiThread(() -> {
++                String error = profileError(profile);
++                if ("default".equals(profile)) error = "The original profile cannot be removed.";
++                if (error == null && inAppWebView != null &&
++                    ("justagram-" + profile).equals(WebViewCompat.getProfile(inAppWebView).getName())) {
++                    error = "Close this profile before removing it.";
++                }
++                if (error != null) {
++                    callbackContext.error(error);
++                    return;
++                }
++                try {
++                    // false means no store exists yet (e.g. a profile never opened).
++                    ProfileStore.getInstance().deleteProfile("justagram-" + profile);
++                    callbackContext.success();
++                } catch (IllegalStateException ex) {
++                    if (!WebViewFeature.isFeatureSupported(WebViewFeature.DELETE_BROWSING_DATA)) {
++                        callbackContext.error("Update Android System WebView to remove a previously opened profile.");
++                        return;
++                    }
++                    try {
++                        String nativeName = "justagram-" + profile;
++                        // Loaded profiles cannot be deleted until the next process. Erase
++                        // all credentials/site data now, then prune the empty store later.
++                        WebStorageCompat.deleteBrowsingData(
++                            ProfileStore.getInstance().getProfile(nativeName).getWebStorage(), () -> {
++                                cordova.getActivity().getSharedPreferences("justagram_removed_profiles", 0)
++                                    .edit().putBoolean(nativeName, true).apply();
++                                callbackContext.success();
++                            });
++                    } catch (RuntimeException removalError) {
++                        callbackContext.error("Unable to remove the saved session. Please try again.");
++                    }
++                } catch (RuntimeException ex) {
++                    callbackContext.error("Unable to remove the saved session. Please try again.");
++                }
++            });
++            return true;
++        }
++        if (action.equals("checkProfile")) {
++            final String profile = args.getString(0);
++            cordova.getActivity().runOnUiThread(() -> {
++                pruneRemovedProfiles();
++                String error = profileError(profile);
++                if (error == null) callbackContext.success();
++                else callbackContext.error(error);
++            });
++            return true;
++        }
+         if (action.equals("open")) {
+             this.callbackContext = callbackContext;
+             final String url = args.getString(0);
+@@ -177,6 +233,12 @@ public class InAppBrowser extends CordovaPlugin {
+             this.cordova.getActivity().runOnUiThread(new Runnable() {
+                 @Override
+                 public void run() {
++                    String profile = features == null ? "default" : features.getOrDefault("profile", "default");
++                    String error = profileError(profile);
++                    if (error != null) {
++                        callbackContext.error(error);
++                        return;
++                    }
+                     String result = "";
+                     // SELF
+                     if (SELF.equals(target)) {
+@@ -367,6 +429,7 @@ public class InAppBrowser extends CordovaPlugin {
+      */
+     @Override
+     public void onPause(boolean multitasking) {
++        if (inAppWebView != null) cookieManagerFor(inAppWebView).flush();
+         if (shouldPauseInAppBrowser) {
+             inAppWebView.onPause();
+         }
+@@ -542,27 +605,30 @@ public class InAppBrowser extends CordovaPlugin {
+                     return;
+                 }
+ 
++                final InAppBrowserDialog closingDialog = dialog;
++                cookieManagerFor(childView).flush();
+                 childView.setWebViewClient(new WebViewClient() {
+-                    // NB: wait for about:blank before dismissing
+                     public void onPageFinished(WebView view, String url) {
+-                        if (dialog != null && !cordova.getActivity().isFinishing()) {
+-                            dialog.dismiss();
+-                            dialog = null;
++                        if (closingDialog != null && !cordova.getActivity().isFinishing()) {
++                            closingDialog.dismiss();
++                        }
++                        if (childView.getParent() instanceof ViewGroup) {
++                            ((ViewGroup) childView.getParent()).removeView(childView);
++                        }
++                        childView.destroy();
++                        if (inAppWebView == childView) inAppWebView = null;
++                        if (dialog == closingDialog) dialog = null;
++                        // Signal exit only after teardown so another profile cannot overlap.
++                        try {
++                            JSONObject obj = new JSONObject();
++                            obj.put("type", EXIT_EVENT);
++                            sendUpdate(obj, false);
++                        } catch (JSONException ex) {
++                            LOG.d(LOG_TAG, "Should never happen");
+                         }
+                     }
+                 });
+-                // NB: From SDK 19: "If you call methods on WebView from any thread
+-                // other than your app's UI thread, it can cause unexpected results."
+-                // http://developer.android.com/guide/webapps/migrating.html#Threads
+                 childView.loadUrl("about:blank");
+-
+-                try {
+-                    JSONObject obj = new JSONObject();
+-                    obj.put("type", EXIT_EVENT);
+-                    sendUpdate(obj, false);
+-                } catch (JSONException ex) {
+-                    LOG.d(LOG_TAG, "Should never happen");
+-                }
+             }
+         });
+     }
+@@ -628,6 +694,38 @@ public class InAppBrowser extends CordovaPlugin {
+         return this.showLocationBar;
+     }
+ 
++    private void pruneRemovedProfiles() {
++        if (!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) return;
++        android.content.SharedPreferences pending = cordova.getActivity()
++            .getSharedPreferences("justagram_removed_profiles", 0);
++        for (String name : pending.getAll().keySet()) {
++            try {
++                ProfileStore.getInstance().deleteProfile(name);
++                pending.edit().remove(name).apply();
++            } catch (RuntimeException ignored) {
++                // Still loaded in this process; retry on the next app launch.
++            }
++        }
++    }
++
++    private String profileError(String profile) {
++        if ("default".equals(profile)) return null;
++        if (!profile.matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")) {
++            return "Invalid profile identifier.";
++        }
++        if (!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
++            return "Update Android System WebView to use additional profiles. Default is still available.";
++        }
++        return null;
++    }
++
++    private CookieManager cookieManagerFor(WebView view) {
++        if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
++            return WebViewCompat.getProfile(view).getCookieManager();
++        }
++        return CookieManager.getInstance();
++    }
++
+     private InAppBrowser getInAppBrowser() {
+         return this;
+     }
+@@ -639,6 +737,7 @@ public class InAppBrowser extends CordovaPlugin {
+      * @param features jsonObject
+      */
+     public String showWebPage(final String url, HashMap<String, String> features) {
++        final String profile = features == null ? "default" : features.getOrDefault("profile", "default");
+         // Determine if we should hide the location bar.
+         showLocationBar = true;
+         showZoomControls = true;
+@@ -928,6 +1027,10 @@ public class InAppBrowser extends CordovaPlugin {
+ 
+                 // WebView
+                 inAppWebView = new WebView(cordova.getActivity());
++                // Set before accessing any WebView APIs: storage is persistent and profile-specific.
++                if (!"default".equals(profile)) {
++                    WebViewCompat.setProfile(inAppWebView, "justagram-" + profile);
++                }
+                 inAppWebView.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+                 inAppWebView.setId(Integer.valueOf(6));
+                 // File Chooser Implemented ChromeClient
+@@ -1022,13 +1125,13 @@ public class InAppBrowser extends CordovaPlugin {
+                 settings.setDomStorageEnabled(true);
+ 
+                 if (clearAllCache) {
+-                    CookieManager.getInstance().removeAllCookie();
++                    cookieManagerFor(inAppWebView).removeAllCookies(null);
+                 } else if (clearSessionCache) {
+-                    CookieManager.getInstance().removeSessionCookie();
++                    cookieManagerFor(inAppWebView).removeSessionCookies(null);
+                 }
+ 
+                 // Enable Thirdparty Cookies
+-                CookieManager.getInstance().setAcceptThirdPartyCookies(inAppWebView,true);
++                cookieManagerFor(inAppWebView).setAcceptThirdPartyCookies(inAppWebView,true);
+ 
+                 inAppWebView.loadUrl(url);
+                 inAppWebView.setId(Integer.valueOf(6));
+@@ -1386,7 +1489,7 @@ public class InAppBrowser extends CordovaPlugin {
+             injectDeferredObject("window.webkit={messageHandlers:{cordova_iab:cordova_iab}}", null);
+ 
+             // CB-10395 InAppBrowser's WebView not storing cookies reliable to local device storage
+-            CookieManager.getInstance().flush();
++            cookieManagerFor(view).flush();
+ 
+             // https://issues.apache.org/jira/browse/CB-11248
+             view.clearFocus();
+diff --git a/src/ios/CDVInAppBrowserOptions.h b/src/ios/CDVInAppBrowserOptions.h
+index d66ce940b99e031be7f0366a3235dd1e6f5e6dda..6889f8a38f54f49b7ff7757ce0ec4b6f7f68c412 100644
+--- a/src/ios/CDVInAppBrowserOptions.h
++++ b/src/ios/CDVInAppBrowserOptions.h
+@@ -21,6 +21,7 @@
+ 
+ @interface CDVInAppBrowserOptions : NSObject {}
+ 
++@property (nonatomic, copy) NSString* profile;
+ @property (nonatomic, assign) BOOL location;
+ @property (nonatomic, assign) BOOL toolbar;
+ @property (nonatomic, copy) NSString* closebuttoncaption;
+diff --git a/src/ios/CDVWKInAppBrowser.h b/src/ios/CDVWKInAppBrowser.h
+index e9e89d8077db1f48ad8344bb5351af29e23028bf..b23984a02d7a84a36d6c6906f06639a4ac97d720 100644
+--- a/src/ios/CDVWKInAppBrowser.h
++++ b/src/ios/CDVWKInAppBrowser.h
+@@ -40,6 +40,8 @@
+ @property (nonatomic, copy) NSRegularExpression *callbackIdPattern;
+ 
+ + (id) getInstance;
++- (void)removeProfile:(CDVInvokedUrlCommand*)command;
++- (void)checkProfile:(CDVInvokedUrlCommand*)command;
+ - (void)open:(CDVInvokedUrlCommand*)command;
+ - (void)close:(CDVInvokedUrlCommand*)command;
+ - (void)injectScriptCode:(CDVInvokedUrlCommand*)command;
+diff --git a/src/ios/CDVWKInAppBrowser.m b/src/ios/CDVWKInAppBrowser.m
+index 85b374f67b2c9e5e9f14dd18c496ca11c9b48461..d82d742083d17ea5b022ce0c367a67cc2100a8a9 100644
+--- a/src/ios/CDVWKInAppBrowser.m
++++ b/src/ios/CDVWKInAppBrowser.m
+@@ -78,6 +78,55 @@ static CDVWKInAppBrowser* instance = nil;
+     return NO;
+ }
+ 
++- (NSString*)profileError:(NSString*)profile
++{
++    if (profile == nil || [profile isEqualToString:@"default"]) return nil;
++    if (![[NSUUID alloc] initWithUUIDString:profile]) return @"Invalid profile identifier.";
++    if (@available(iOS 17.0, *)) return nil;
++    return @"Additional profiles require iOS 17 or later. Default is still available.";
++}
++
++- (void)removeProfile:(CDVInvokedUrlCommand*)command
++{
++    NSString* profile = [command argumentAtIndex:0 withDefault:@"default"];
++    NSString* error = [self profileError:profile];
++    if ([profile isEqualToString:@"default"]) error = @"The original profile cannot be removed.";
++    if (@available(iOS 17.0, *)) {
++        NSUUID* activeIdentifier = self.inAppBrowserViewController.webView.configuration.websiteDataStore.identifier;
++        if (activeIdentifier != nil && [activeIdentifier isEqual:[[NSUUID alloc] initWithUUIDString:profile]]) {
++            error = @"Close this profile before removing it.";
++        }
++    }
++    if (error != nil) {
++        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error] callbackId:command.callbackId];
++        return;
++    }
++    if (@available(iOS 17.0, *)) {
++        NSUUID* identifier = [[NSUUID alloc] initWithUUIDString:profile];
++        [WKWebsiteDataStore fetchAllDataStoreIdentifiers:^(NSArray<NSUUID*>* identifiers) {
++            if (![identifiers containsObject:identifier]) {
++                [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_OK] callbackId:command.callbackId];
++                return;
++            }
++            [WKWebsiteDataStore removeDataStoreForIdentifier:identifier completionHandler:^(NSError* removalError) {
++                CDVPluginResult* result = removalError
++                    ? [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Unable to remove the saved session. Restart JustAgram and try again."]
++                    : [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
++                [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
++            }];
++        }];
++    }
++}
++
++- (void)checkProfile:(CDVInvokedUrlCommand*)command
++{
++    NSString* error = [self profileError:[command argumentAtIndex:0 withDefault:@"default"]];
++    CDVPluginResult* result = error
++        ? [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:error]
++        : [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
++    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
++}
++
+ - (void)open:(CDVInvokedUrlCommand*)command
+ {
+     CDVPluginResult* pluginResult;
+@@ -86,6 +135,12 @@ static CDVWKInAppBrowser* instance = nil;
+     NSString* target = [command argumentAtIndex:1 withDefault:kInAppBrowserTargetSelf];
+     NSString* options = [command argumentAtIndex:2 withDefault:@"" andClass:[NSString class]];
+     
++    CDVInAppBrowserOptions* profileOptions = [CDVInAppBrowserOptions parseOptions:options];
++    NSString* profileError = [self profileError:profileOptions.profile];
++    if (profileError != nil) {
++        [self.commandDelegate sendPluginResult:[CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:profileError] callbackId:command.callbackId];
++        return;
++    }
+     self.callbackId = command.callbackId;
+     
+     if (url != nil) {
+@@ -118,6 +173,11 @@ static CDVWKInAppBrowser* instance = nil;
+     CDVInAppBrowserOptions* browserOptions = [CDVInAppBrowserOptions parseOptions:options];
+     
+     WKWebsiteDataStore* dataStore = [WKWebsiteDataStore defaultDataStore];
++    if (@available(iOS 17.0, *)) {
++        if (browserOptions.profile != nil && ![browserOptions.profile isEqualToString:@"default"]) {
++            dataStore = [WKWebsiteDataStore dataStoreForIdentifier:[[NSUUID alloc] initWithUUIDString:browserOptions.profile]];
++        }
++    }
+     if (browserOptions.cleardata) {
+         
+         NSDate* dateFrom = [NSDate dateWithTimeIntervalSince1970:0];
+@@ -682,6 +742,11 @@ BOOL isExiting = FALSE;
+     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
+     
+     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
++    if (@available(iOS 17.0, *)) {
++        if (_browserOptions.profile != nil && ![_browserOptions.profile isEqualToString:@"default"]) {
++            configuration.websiteDataStore = [WKWebsiteDataStore dataStoreForIdentifier:[[NSUUID alloc] initWithUUIDString:_browserOptions.profile]];
++        }
++    }
+     
+     NSString *userAgent = configuration.applicationNameForUserAgent;
+     if (

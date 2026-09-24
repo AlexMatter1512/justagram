@@ -1,14 +1,17 @@
-import { StatusBar, Style } from '@capacitor/status-bar';
+import { StatusBar, Style } from "@capacitor/status-bar";
 
 export class ThemeService {
   public static async init(): Promise<void> {
     // Set status bar to overlay webview so it uses body background color
-    if (typeof cordova !== 'undefined') {
+    if (typeof cordova !== "undefined") {
       try {
         await StatusBar.setOverlaysWebView({ overlay: true });
         await StatusBar.setStyle({ style: Style.Dark });
       } catch (e) {
-        console.warn("[JustAgram] StatusBar plugin not available or failed:", e);
+        console.warn(
+          "[JustAgram] StatusBar plugin not available or failed:",
+          e,
+        );
       }
     }
   }
@@ -28,23 +31,6 @@ export class ThemeService {
       StatusBar.setStyle({ style: Style.Default }).catch(() => {}); // Dark icons for light bg
     } else {
       StatusBar.setStyle({ style: Style.Dark }).catch(() => {}); // Light icons for dark bg
-    }
-  }
-
-  public static enableButtons(): void {
-    const buttons = document.querySelectorAll("#launch-btn");
-    buttons.forEach((btn) => {
-      (btn as HTMLButtonElement).disabled = false;
-    });
-
-    const spinner = document.querySelector(".spinner");
-    if (spinner) {
-      (spinner as HTMLElement).style.display = "none";
-    }
-
-    const p = document.querySelector("p");
-    if (p) {
-      p.innerText = "Ready to launch";
     }
   }
 }

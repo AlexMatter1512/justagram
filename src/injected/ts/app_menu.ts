@@ -75,7 +75,7 @@ import type { Settings } from '../../types';
 
     // Helper to toggle visibility based on URL
     function updateButtonVisibility(url: string) {
-      if (url.includes('/accounts/settings/')) {
+      if (url.includes('/accounts/') || url.includes('/challenge/') || url.includes('/checkpoint/')) {
         menuBtn.style.display = 'flex';
       } else {
         menuBtn.style.display = 'none';
@@ -87,13 +87,7 @@ import type { Settings } from '../../types';
       // Find closest anchor tag
       const target = (e.target as HTMLElement).closest('a');
       if (target && target.href) {
-        // If it's a settings link, show button. Otherwise, if it's a navigation, hide it.
-        if (target.href.includes('/accounts/settings/')) {
-          menuBtn.style.display = 'flex';
-        } else {
-          // We assume any other link is a navigation away
-          menuBtn.style.display = 'none';
-        }
+        updateButtonVisibility(target.href);
       }
     });
 
@@ -110,6 +104,11 @@ import type { Settings } from '../../types';
     function openMenu(): void {
       (menuOverlay as HTMLElement).style.display = 'flex';
     }
+
+    document.getElementById('justagram-switch-profile')?.addEventListener('click', () => {
+      menuOverlay.style.display = 'none';
+      window.dispatchEvent(new Event('justagram-open-profiles'));
+    });
 
     // Open menu
     menuBtn.addEventListener('click', openMenu);
@@ -165,6 +164,8 @@ import type { Settings } from '../../types';
 
         updateSliderStyle(slider, currentSettings[key]);
         updateToggleVisibility(currentSettings);
+        // Route handlers read this snapshot when navigating after a toggle.
+        if (data) data.settings = { ...currentSettings };
         saveSettings(currentSettings);
         window.dispatchEvent(new CustomEvent('justagram-settings-changed', { detail: currentSettings }));
       });

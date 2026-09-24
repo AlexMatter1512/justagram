@@ -12,6 +12,7 @@
     "build:android": "bun run sync && bunx cap copy android && bunx cap open android",
     "build:ios": "bun run sync && bunx cap copy ios && bunx cap open ios",
     "run:android": "bun run sync && bunx cap copy android && bunx cap run android",
+    "run:ios": "bun run sync && bunx cap copy ios && bunx cap run ios",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "check": "npm run typecheck && npm run lint"
@@ -36,5 +37,8 @@
     "@capacitor/ios": "^8.0.0",
     "@capacitor/status-bar": "^8.0.0",
     "cordova-plugin-inappbrowser": "github:AlexMatter1512/cordova-plugin-inappbrowser"
+  },
+  "patchedDependencies": {
+    "cordova-plugin-inappbrowser@github:AlexMatter1512/cordova-plugin-inappbrowser#d5a9f0c": "patches/cordova-plugin-inappbrowser@github%3AAlexMatter1512%2Fcordova-plugin-inappbrowser#d5a9f0c.patch"
   }
 }

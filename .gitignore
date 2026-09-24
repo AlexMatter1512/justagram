@@ -42,6 +42,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 icons/
 CLAUDE.md
 GEMINI.md
+AGENTS.md
 android/.project
 android/app/.project
 .gemini-clipboard
