@@ -1,47 +1,69 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
-
+:root {
+  color-scheme: dark;
+}
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: #000;
-    color: #fff;
-    height: 100vh;
-    overflow: hidden;
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  background: #0b0b0e;
+  color: #f5f5f7;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(32px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
 }
-
-.loading-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    text-align: center;
+.startup {
+  width: 100%;
+  max-width: 360px;
 }
-
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  background: #e1306c;
+  border-radius: 16px;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 24px;
+}
 h1 {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -1px;
+  margin: 0 0 8px;
 }
-
 p {
-    font-size: 1rem;
-    color: #888;
-    margin-bottom: 2rem;
+  color: #a7a7b1;
+  line-height: 1.5;
 }
-
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #333;
-    border-top-color: #fff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.tagline {
+  margin: 0 0 36px;
 }
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
+#startup-status {
+  font-size: 14px;
 }
+button {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  background: #e1306c;
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  font-weight: 600;
+  margin-top: 16px;
+}
+button.secondary { background: #292932; }
+:disabled { opacity: 0.55; cursor: wait; }
+:focus-visible { outline: 2px solid #ff96b8; outline-offset: 3px; }
+#startup-error { color: #ff9ebc; font-size: 14px; }
+#startup-error:empty, [hidden] { display: none !important; }
