@@ -100,10 +100,14 @@ Default. A desktop browser cannot open native profiles.
 The native implementation follows [Android WebView profiles](https://developer.android.com/reference/androidx/webkit/WebViewCompat#setProfile(android.webkit.WebView,java.lang.String))
 and [WebKit persistent data stores](https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/).
 
-The InAppBrowser extensions are tracked in `patches/` via Bun's
-`patchedDependencies`. Run `bun install` to apply them, followed by `bun run sync`
-and a native rebuild. Keep the patch when updating the plugin; it adds the
-`checkProfile` action and `profile` browser option on Android and iOS.
+The InAppBrowser extensions are maintained in the
+[plugin fork](https://github.com/AlexMatter1512/cordova-plugin-inappbrowser),
+pinned to a commit in `package.json`. They include script injection, the
+`profile` browser option, and `checkProfile` / `removeProfile` native actions.
+Run `bun install`, followed by `bun run sync` and a native rebuild after updating
+the dependency. No Bun patch is needed. The ignored `cordova-plugin-inappbrowser/`
+directory can hold a local checkout of the fork; edits there must be committed,
+pushed, and pinned in `package.json` before installation picks them up.
 
 Validation:
 

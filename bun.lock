@@ -11,7 +11,7 @@
         "@capacitor/core": "^8.0.0",
         "@capacitor/ios": "^8.0.0",
         "@capacitor/status-bar": "^8.0.0",
-        "cordova-plugin-inappbrowser": "github:AlexMatter1512/cordova-plugin-inappbrowser",
+        "cordova-plugin-inappbrowser": "github:AlexMatter1512/cordova-plugin-inappbrowser#46961a3822948dfdd48875cb8508d0ff9b837939",
       },
       "devDependencies": {
         "@eslint/js": "^10.0.1",
@@ -26,9 +26,6 @@
         "typescript": "^5",
       },
     },
-  },
-  "patchedDependencies": {
-    "cordova-plugin-inappbrowser@github:AlexMatter1512/cordova-plugin-inappbrowser#d5a9f0c": "patches/cordova-plugin-inappbrowser@github%3AAlexMatter1512%2Fcordova-plugin-inappbrowser#d5a9f0c.patch",
   },
   "packages": {
     "@babel/code-frame": ["@babel/code-frame@7.27.1", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.27.1", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg=="],
@@ -297,7 +294,7 @@
 
     "conventional-commits-parser": ["conventional-commits-parser@3.2.4", "", { "dependencies": { "JSONStream": "^1.0.4", "is-text-path": "^1.0.1", "lodash": "^4.17.15", "meow": "^8.0.0", "split2": "^3.0.0", "through2": "^4.0.0" }, "bin": { "conventional-commits-parser": "cli.js" } }, "sha512-nK7sAtfi+QXbxHCYfhpZsfRtaitZLIA6889kFIouLvz6repszQDgxBu7wf2WbU+Dco7sAnNCJYERCwt54WPC2Q=="],
 
-    "cordova-plugin-inappbrowser": ["cordova-plugin-inappbrowser@github:AlexMatter1512/cordova-plugin-inappbrowser#d5a9f0c", {}, "AlexMatter1512-cordova-plugin-inappbrowser-d5a9f0c"],
+    "cordova-plugin-inappbrowser": ["cordova-plugin-inappbrowser@github:AlexMatter1512/cordova-plugin-inappbrowser#46961a3", {}, "AlexMatter1512-cordova-plugin-inappbrowser-46961a3", "sha512-w+49BIHbpEDtECRjJzhgDcmyz6cIbFjWY33qh4VHiw0DU+THbAJtStUblmh3gOtIFHvikR1a8ubpkFepTCcZpw=="],
 
     "core-util-is": ["core-util-is@1.0.3", "", {}, "sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ=="],
 

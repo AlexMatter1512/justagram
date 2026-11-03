@@ -5,7 +5,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: ['www/', 'dist/', 'android/', 'ios/', 'scripts/', '**/*.d.ts'],
+    ignores: ['www/', 'dist/', 'android/', 'ios/', 'scripts/', 'cordova-plugin-inappbrowser/', '**/*.d.ts'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
