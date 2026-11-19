@@ -39,7 +39,6 @@ const data: LoadedAssets = {
   menuButtonHTML: "",
   cssRules: {} as LoadedAssets["cssRules"],
   cssGlobal: "",
-  blockMap: {},
   version: "test",
   settings: {
     hideReels: true,
@@ -435,21 +434,12 @@ describe("native browser lifecycle", () => {
     runInNewContext(redirect, { window: page });
     expect(replace).toHaveBeenCalledWith("/direct/inbox/");
   });
-  test("confirms the visible Home setting to the page only after it is persisted", async () => {
+  test("persists the visible Home setting without reloading the active page", async () => {
     const browser = await openDefault();
-    const saveVisible = { data: { type: "saveSettings", payload: { ...data.settings, hideFeed: false } } };
-    const page = new EventTarget();
-    const saved = mock(() => {
-      expect(JSON.parse(storage.get("justagram_settings")!).hideFeed).toBe(false);
-    });
-    page.addEventListener("justagram-feed-visible-saved", saved);
-    browser.emit("message", saveVisible);
-    runInNewContext(browser.scripts.at(-1)!, { window: page, Event });
-    expect(saved).toHaveBeenCalledTimes(1);
-
     const scriptCount = browser.scripts.length;
-    Object.assign(localStorage, { setItem() { throw new Error("Storage unavailable"); } });
-    browser.emit("message", saveVisible);
+    const payload = { ...data.settings, hideFeed: false };
+    browser.emit("message", { data: { type: "saveSettings", payload } });
+    expect(JSON.parse(storage.get("justagram_settings")!).hideFeed).toBe(false);
     expect(browser.scripts).toHaveLength(scriptCount);
   });
   test("load failure closes the browser and reports an actionable error", async () => {

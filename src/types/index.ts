@@ -45,7 +45,6 @@ export type JustagramData = {
   cssGlobal: string;
   cssRules: CSSRules;
   settings: Settings;
-  blockMap: Record<string, string[]>;
   version: string;
   profileState?: ProfileState;
 };

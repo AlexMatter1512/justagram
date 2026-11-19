@@ -42,23 +42,11 @@ export class AssetService {
         return { name: fileName, content: await res.text() };
       });
 
-      // Load Data Files
-      const dataPromises = ((AssetManifest as any).dataFiles || []).map(async (fileName: string) => {
-        const res = await fetch(`injected/data/${fileName}`);
-        if (!res.ok) {
-           console.warn(`[JustAgram] Failed to load data ${fileName}`);
-           return { name: fileName, content: {} };
-        }
-        return { name: fileName, content: await res.json() };
-      });
-
-      // const [htmlFiles, scripts, cssFiles, dataFiles] = await Promise.all([
-      const [htmlFiles, scripts, globalCSSFiles, cssFiles, dataFiles] = await Promise.all([
+      const [htmlFiles, scripts, globalCSSFiles, cssFiles] = await Promise.all([
         Promise.all(htmlPromises),
         Promise.all(scriptPromises),
         Promise.all(globalCSSPromises),
         Promise.all(cssPromises),
-        Promise.all(dataPromises),
       ]);
 
       // Map HTML to JustagramData properties
@@ -74,17 +62,12 @@ export class AssetService {
 
       const cssGlobal = globalCSSFiles.map(f => f.content).join("\n");
       
-      const blockMap = dataFiles.find((f) => f.name === "blockmap.json")?.content || {};
-
-      console.log("[JustAgram] Assets loaded successfully");
-
       return {
         menuButtonHTML,
         menuHTML,
         cssRules,
         cssGlobal,
         settings: SettingsService.load(),
-        blockMap,
         version: AppVersion,
         injectedScripts: scripts,
       };

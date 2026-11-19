@@ -68,8 +68,6 @@ export class BrowserService {
                 window.location.replace('/direct/inbox/');
               }
             ` });
-          } else if (message.payload.hideFeed === false) {
-            browser.insertScript({ code: "window.dispatchEvent(new Event('justagram-feed-visible-saved'));" });
           }
         } else if (
           message.type === "updateBackgroundColor" &&

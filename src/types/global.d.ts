@@ -44,16 +44,7 @@ declare global {
         };
       };
     };
-    JustagramBlocker: JustagramBlockerAPI;
     JustagramDOMHandlers: Record<string, () => void>;
-  }
-
-  interface JustagramBlockerAPI {
-    add: (substring: string) => void;
-    /** Clear the rules and report whether they actually rejected a request. */
-    clear: () => boolean;
-    print: () => void;
-    isBlocked: (url: string) => boolean;
   }
 
   /** Apache Cordova instance */

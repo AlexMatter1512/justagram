@@ -3,114 +3,92 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 
 const transpiler = new Bun.Transpiler({ loader: "ts" });
-const feedStyle = readFileSync(new URL("../src/injected/css/rules/hideFeed.css", import.meta.url), "utf8");
-const scripts = ["handler_home", "patch_fetch", "patch_pushState", "app_settings_css"].map(name =>
-  transpiler.transformSync(readFileSync(new URL(`../src/injected/ts/${name}.ts`, import.meta.url), "utf8")),
-).join("\n");
+const script = transpiler.transformSync(readFileSync(new URL("../src/injected/ts/handler_home.ts", import.meta.url), "utf8"));
+const field = "xdt_api__v1__feed__timeline__connection";
+const server = field + "(first:4)";
+const merged = "__PolarisFeedPage__" + field + "_connection(order:\"ranked\")";
+const profile = "xdt_api__v1__feed__user_timeline_graphql_connection";
 
-function enterHome(hideFeed: boolean) {
-  const location = { pathname: "/", reload: mock(() => {}) };
-  const history = {
-    pushState(_state: unknown, _title: string, path: string) { location.pathname = path; },
-    replaceState(_state: unknown, _title: string, path: string) { location.pathname = path; },
+function connection(type = "XDTFeedTimelineResponseConnection") {
+  const pageInfo = { setValue: mock(() => {}) };
+  return {
+    getType: () => type,
+    getLinkedRecord: (key: string) => key === "page_info" ? pageInfo : null,
+    setLinkedRecords: mock(() => {}),
+    pageInfo,
   };
-  const classes = new Set<string>();
-  const main = { remove: mock(() => {}) };
-  let stylesheet: { textContent: string; remove(): void } | undefined;
-  const document = {
-    head: { appendChild: (style: typeof stylesheet) => { stylesheet = style; } },
-    createElement: () => ({ textContent: "", remove() { stylesheet = undefined; } }),
-    getElementById: () => stylesheet,
-    documentElement: {
-      classList: {
-        toggle(name: string, enabled: boolean) {
-          if (enabled) classes.add(name);
-          else classes.delete(name);
-        },
-      },
-    },
-    querySelector: () => main,
-  };
-  class XHR {
-    status = 0;
-    open(_method: string, _url: string) {}
-    send() { this.status = 200; }
-  }
-  const settings = { hideFeed };
-  const page = Object.assign(new EventTarget(), {
-    location,
-    fetch: async (_url: string) => new Response(null, { status: 200 }),
-    XMLHttpRequest: XHR,
-    __JUSTAGRAM_DATA__: { settings, cssRules: { hideFeed: feedStyle }, blockMap: { "/": ["graphql"] } },
-  });
-  const timers: Array<() => void> = [];
-  runInNewContext(scripts, {
-    window: page, document, history, Event, Response,
-    setTimeout: (callback: () => void) => timers.push(callback),
-  });
-  timers.splice(0).forEach(callback => callback());
-
-  function toggle(hidden: boolean) {
-    settings.hideFeed = hidden;
-    page.dispatchEvent(new CustomEvent("justagram-settings-changed", { detail: settings }));
-  }
-  function saved() {
-    page.dispatchEvent(new Event("justagram-feed-visible-saved"));
-  }
-  function feedStyleActive() {
-    return classes.has("justagram-home") && stylesheet?.textContent.includes(feedStyle) === true;
-  }
-  return { page, history, feedStyleActive, main, reload: location.reload, toggle, saved };
 }
 
-describe("Home feed filtering", () => {
-  test("keeps the mounted feed and unblocks requests immediately without reloading", async () => {
-    const { page, feedStyleActive, main, reload, toggle, saved } = enterHome(false);
-    toggle(true);
-    expect(feedStyleActive()).toBe(true);
-    expect(main.remove).not.toHaveBeenCalled();
-    toggle(false);
-    expect(feedStyleActive()).toBe(false);
-    expect((await page.fetch("/graphql/query")).status).toBe(200);
-    saved();
-    expect(reload).not.toHaveBeenCalled();
+function setup(available = true) {
+  const records = new Map([server, merged, profile, "xdt_viewer"].map(key => [key, connection()] as const));
+  const update = { getRoot: () => ({ getLinkedRecord: (key: string) => records.get(key) }) };
+  const dispose = mock(() => {});
+  const env = {
+    getStore: () => ({ getSource: () => ({ get: () => Object.fromEntries(records) }) }),
+    applyUpdate: mock(({ storeUpdater }: { storeUpdater: (store: typeof update) => void }) => {
+      storeUpdater(update);
+      return { dispose };
+    }),
+  };
+  const settings = { hideFeed: true };
+  let loaded: ((environment: typeof env) => void) | undefined;
+  const page = Object.assign(new EventTarget(), {
+    location: { pathname: "/" },
+    __JUSTAGRAM_DATA__: { settings },
+    require: () => available ? env : undefined,
+    requireLazy: (_names: string[], cb: typeof loaded) => { loaded = cb; },
+  });
+  const markHome = mock(() => {});
+  runInNewContext(script, { window: page, document: { documentElement: { classList: { toggle: markHome } } } });
+  function toggle(hidden: boolean) {
+    settings.hideFeed = hidden;
+    page.dispatchEvent(new Event("justagram-settings-changed"));
+  }
+  return { env, records, update, dispose, page, markHome, toggle, load: () => loaded!(env) };
+}
+
+describe("Home timeline filter", () => {
+  test("empties only the Home connections and disables their pagination", () => {
+    const { records } = setup();
+    for (const key of [server, merged]) {
+      const record = records.get(key)!;
+      expect(record.setLinkedRecords).toHaveBeenCalledWith([], "edges");
+      expect(record.pageInfo.setValue).toHaveBeenCalledWith(false, "has_next_page");
+      expect(record.pageInfo.setValue).toHaveBeenCalledWith(false, "has_previous_page");
+    }
+    for (const key of [profile, "xdt_viewer"]) {
+      expect(records.get(key)!.setLinkedRecords).not.toHaveBeenCalled();
+    }
   });
 
-  for (const transport of ["fetch", "XHR"]) {
-    test(`restores a hidden initial Home after a blocked ${transport} and a successful save`, async () => {
-      const { page, feedStyleActive, history, reload, toggle, saved } = enterHome(true);
-      expect(feedStyleActive()).toBe(true);
-      if (transport === "fetch") {
-        expect((await page.fetch("/graphql/query")).status).toBe(500);
-      } else {
-        const xhr = new page.XMLHttpRequest();
-        xhr.open("GET", "/graphql/query");
-        xhr.send();
-        expect(xhr.status).toBe(500);
-      }
-      history.replaceState(null, "", "/");
-      toggle(false);
-      expect(feedStyleActive()).toBe(false);
-      expect(reload).not.toHaveBeenCalled();
-      expect((await page.fetch("/graphql/query")).status).toBe(200);
-      saved();
-      saved();
-      expect(reload).toHaveBeenCalledTimes(1);
-    });
-  }
-
-  test("leaving hidden Home releases the next page and defers any recovery until Home", async () => {
-    const { page, feedStyleActive, history, reload, toggle, saved } = enterHome(true);
-    expect(feedStyleActive()).toBe(true);
-    expect((await page.fetch("/graphql/query")).status).toBe(500);
-    history.pushState(null, "", "/direct/inbox/");
-    expect(feedStyleActive()).toBe(false);
-    expect((await page.fetch("/graphql/query")).status).toBe(200);
+  test("keeps the data filter during rapid navigation and disposes it once on unhide", () => {
+    const { env, page, dispose, toggle, markHome } = setup();
+    for (const path of ["/example/", "/"]) {
+      page.location.pathname = path;
+      page.dispatchEvent(new Event("justagram-navigation"));
+      expect(markHome).toHaveBeenLastCalledWith("justagram-home", path === "/");
+    }
+    expect(env.applyUpdate).toHaveBeenCalledTimes(1);
     toggle(false);
-    saved();
-    expect(reload).not.toHaveBeenCalled();
-    page.location.pathname = "/";
-    page.dispatchEvent(new Event("popstate"));
-    expect(reload).toHaveBeenCalledTimes(1);
+    toggle(false);
+    expect(dispose).toHaveBeenCalledTimes(1);
+    toggle(true);
+    expect(env.applyUpdate).toHaveBeenCalledTimes(2);
+  });
+
+  test("handles late Relay initialization and connections arriving after setup", () => {
+    const { env, load, records, update, toggle, markHome } = setup(false);
+    expect(markHome).toHaveBeenCalledWith("justagram-home", true);
+    toggle(false);
+    load();
+    expect(env.applyUpdate).not.toHaveBeenCalled();
+    toggle(true);
+    const nextPage = connection();
+    const unknown = connection("OtherType");
+    records.set(field + "(after:\"cursor\")", nextPage);
+    records.set(field, unknown);
+    env.applyUpdate.mock.calls[0]![0].storeUpdater(update);
+    expect(nextPage.setLinkedRecords).toHaveBeenCalledWith([], "edges");
+    expect(unknown.setLinkedRecords).not.toHaveBeenCalled();
   });
 });

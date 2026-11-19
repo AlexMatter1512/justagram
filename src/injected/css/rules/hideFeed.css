@@ -3,3 +3,9 @@ html.justagram-home :is(main, [role="main"]),
 html.justagram-home :is(main, [role="main"]) * {
   visibility: hidden !important;
 }
+
+/* The URL can change while Home's header and suggestions are still mounted. */
+nav:has(header a:is([href="#"], [href="/"])):has(header a[href="/notifications/"]) + :is(main, [role="main"]) {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
