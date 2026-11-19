@@ -40,195 +40,79 @@
 
         <p style="color: #8e8e8e; font-size: 13px; margin: 0 0 16px 0;">Hide distracting content</p>
 
-        <div class="justagram-toggle-item" data-key="hideReels" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #363636;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">Reels</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Hide Reels tab and content</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
+        <label class="justagram-toggle-item" data-key="hideReels">
+            <span>
+                <span class="jg-setting-name">Reels</span>
+                <small>Hide Reels tab and content</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Reels">
+        </label>
+        <label class="justagram-toggle-item" data-key="hideStories">
+            <span>
+                <span class="jg-setting-name">Stories</span>
+                <small>Hide Stories bar at top</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Stories">
+        </label>
+        <label class="justagram-toggle-item" data-key="hideExplore">
+            <span>
+                <span class="jg-setting-name">Explore</span>
+                <small>Hide Explore page content</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Explore">
+        </label>
+        <label class="justagram-toggle-item" data-key="hideFeed">
+            <span>
+                <span class="jg-setting-name">Home Feed</span>
+                <small>Hide main feed on home page</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Home Feed">
+        </label>
+        <label class="justagram-toggle-item" data-key="hideSuggestedReels">
+            <span>
+                <span class="jg-setting-name">Suggested Reels</span>
+                <small>Stop doom-scrolling on shared reels</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Suggested Reels">
+        </label>
+        <label class="justagram-toggle-item" data-key="hideThreads">
+            <span>
+                <span class="jg-setting-name">Threads Promo</span>
+                <small>Hide Threads promotion links</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Threads Promo">
+        </label>
+        <label class="justagram-toggle-item" data-key="hideNotes">
+            <span>
+                <span class="jg-setting-name">Notes</span>
+                <small>Hide friends note on top of chat list</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Notes">
+        </label>
+        <label class="justagram-toggle-item" data-key="dmOnlyMode">
+            <span>
+                <span class="jg-setting-name">DM Only Mode</span>
+                <small>Focus on DMs and keep only Notes visible</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="DM Only Mode">
+        </label>
+        <label class="justagram-toggle-item" data-key="commitmentMode">
+            <span>
+                <span class="jg-setting-name">Commitment Mode</span>
+                <small>Lock the filters you enable on this profile</small>
+            </span>
+            <input type="checkbox" role="switch" aria-label="Commitment Mode">
+        </label>
 
-        <div class="justagram-toggle-item" data-key="hideStories" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #363636;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">Stories</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Hide Stories bar at top</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
-
-        <div class="justagram-toggle-item" data-key="hideExplore" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #363636;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">Explore</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Hide Explore page content</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
-
-        <div class="justagram-toggle-item" data-key="hideFeed" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #363636;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">Home Feed</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Hide main feed on home page</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
-
-        <div class="justagram-toggle-item" data-key="hideSuggestedReels" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #363636;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">Suggested Reels</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Stop doom-scrolling on shared reels</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
-
-        <div class="justagram-toggle-item" data-key="hideThreads" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">Threads Promo</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Hide Threads promotion links</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
-
-        <div class="justagram-toggle-item" data-key="hideNotes" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid #363636;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">Notes</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Hide friends note on top of chat list</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
-
-        <div class="justagram-toggle-item" data-key="dmOnlyMode" style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-        ">
-            <div>
-                <div style="color: white; font-size: 15px;">DM Only Mode</div>
-                <div style="color: #8e8e8e; font-size: 12px;">Focus on DMs and keep only Notes visible</div>
-            </div>
-            <label style="position: relative; display: inline-block; width: 48px; height: 28px;">
-                <input type="checkbox" checked style="opacity: 0; width: 0; height: 0;">
-                <span class="justagram-slider" style="
-                    position: absolute;
-                    cursor: pointer;
-                    top: 0; left: 0; right: 0; bottom: 0;
-                    background-color: #363636;
-                    transition: .3s;
-                    border-radius: 28px;
-                "></span>
-            </label>
-        </div>
+        <dialog id="jg-commit-warning" aria-labelledby="jg-warning-title" aria-describedby="jg-warning-message">
+            <h3 id="jg-warning-title"></h3>
+            <p id="jg-warning-message"></p>
+            <form method="dialog">
+                <button value="cancel" autofocus>Cancel</button>
+                <button value="accept" id="jg-confirm-lock">Enable and lock</button>
+            </form>
+        </dialog>
+        <p id="jg-settings-error" role="alert"></p>
 
         <button id="justagram-switch-profile" type="button" style="width: 100%; min-height: 44px; margin-top: 20px; border: 1px solid #555; border-radius: 10px; background: #292929; color: white; font: inherit; cursor: pointer;">Switch profile</button>
         <div style="margin-top: 20px; text-align: center;">

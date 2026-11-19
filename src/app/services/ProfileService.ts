@@ -1,3 +1,5 @@
+import { SettingsService } from "./SettingsService";
+
 export type Profile = {
   id: string;
   name: string;
@@ -55,7 +57,9 @@ export class ProfileService {
 
   public static ensureDefaultProfile(): void {
     // Normalizing also removes the unused legacy cookies field.
-    localStorage.setItem(this.PROFILES_KEY, JSON.stringify(this.getProfiles()));
+    const profiles = this.getProfiles();
+    SettingsService.migrateLegacySettings(profiles);
+    localStorage.setItem(this.PROFILES_KEY, JSON.stringify(profiles));
     localStorage.setItem(this.ACTIVE_PROFILE_KEY, this.getActiveProfileId());
   }
 
@@ -112,6 +116,7 @@ export class ProfileService {
     }
     // Keep the entry and selection if native session deletion fails.
     await this.nativeAction("removeProfile", id);
+    SettingsService.removeProfile(id);
     localStorage.setItem(
       this.PROFILES_KEY,
       JSON.stringify(this.getProfiles().filter((profile) => profile.id !== id)),

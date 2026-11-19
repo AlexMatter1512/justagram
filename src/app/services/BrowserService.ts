@@ -1,4 +1,4 @@
-import type { LoadedAssets, ProfileState } from "../../types";
+import type { JustagramData, LoadedAssets, ProfileState } from "../../types";
 import { ProfileService } from "./ProfileService";
 import { SettingsService } from "./SettingsService";
 import { ThemeService } from "./ThemeService";
@@ -26,7 +26,7 @@ export class BrowserService {
       if (!ProfileService.getProfiles().some(profile => profile.id === profileId))
         throw new Error("Choose an existing profile.");
       const backOption = cordova.platformId === "android"
-        ? `,dmonlyback=${SettingsService.load().dmOnlyMode ? "yes" : "no"}`
+        ? `,dmonlyback=${SettingsService.load(profileId).dmOnlyMode ? "yes" : "no"}`
         : "";
       this.browser = cordova.InAppBrowser.open(
         this.INSTAGRAM_URL,
@@ -62,25 +62,25 @@ export class BrowserService {
       const message = event.data;
       if (!message) return;
       try {
-        if (message.type === "saveSettings" && message.payload && instagramPage) {
-          const saved = SettingsService.save(message.payload);
-          if (!saved) return;
-          if (cordova.platformId === "android") {
-            cordova.exec(
-              () => {},
-              error => console.error("[JustAgram] Could not update Android Back", error),
-              "InAppBrowser",
-              "setDmOnlyBack",
-              [message.payload.dmOnlyMode === true],
-            );
+        if (message.type === "saveSettings" && instagramPage && typeof message.requestId === "string") {
+          const { requestId, key, enabled, confirmed } = message;
+          let result;
+          try {
+            const settings = SettingsService.update(profileId, key, enabled, confirmed === true);
+            if (cordova.platformId === "android" && key === "dmOnlyMode") {
+              cordova.exec(
+                () => {},
+                error => console.error("[JustAgram] Could not update Android Back", error),
+                "InAppBrowser",
+                "setDmOnlyBack",
+                [settings.dmOnlyMode],
+              );
+            }
+            result = { requestId, settings };
+          } catch {
+            result = { requestId, error: "Couldn’t save this setting. Please try again." };
           }
-          if (message.openInbox === true && message.payload.dmOnlyMode === true) {
-            browser.insertScript({ code: `
-              if (window.location.pathname === '/' && window.__JUSTAGRAM_DATA__?.settings.dmOnlyMode === true) {
-                window.location.replace('/direct/inbox/');
-              }
-            ` });
-          }
+          browser.insertScript({ code: `window.dispatchEvent(new CustomEvent('justagram-settings-result', { detail: ${JSON.stringify(result)} }));` });
         } else if (
           message.type === "updateBackgroundColor" &&
           message.payload
@@ -105,9 +105,12 @@ export class BrowserService {
       instagramPage = true;
       // Login and logout cause full document loads. Inject into each fresh page,
       // and keep duplicate loadstop events from adding extra listeners or timers.
-      const { injectedScripts, ...payload } = data;
-      payload.settings = SettingsService.load();
-      payload.profileState = { ...this.profileState(profileId), ...notice };
+      const { injectedScripts, ...assets } = data;
+      const payload: JustagramData = {
+        ...assets,
+        settings: SettingsService.load(profileId),
+        profileState: { ...this.profileState(profileId), ...notice },
+      };
       browser.insertCSS({ code: data.cssGlobal });
       browser.insertScript({
         code: `

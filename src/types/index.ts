@@ -1,27 +1,11 @@
-/**
- * Shared type definitions used across app and injected contexts.
- */
-
-/**
- * User settings for content filtering.
- * Each property corresponds to a toggle in the settings menu.
- */
-export type Settings = {
-  hideReels: boolean;
-  hideStories: boolean;
-  hideExplore: boolean;
-  hideFeed: boolean;
-  hideSuggestedReels: boolean;
-  hideThreads: boolean;
-  hideNotes: boolean;
-  dmOnlyMode: boolean;
-};
+import type { Settings } from './settings';
+export type { Settings } from './settings';
 
 /**
  * CSS rules mapped by filter name.
- * Keys must match the Settings type keys.
+ * Commitment Mode controls settings and has no filter stylesheet.
  */
-export type CSSRules = Record<keyof Settings, string>;
+export type CSSRules = Record<Exclude<keyof Settings, 'commitmentMode'>, string>;
 
 export type ProfileState = {
   profiles: Array<{ id: string; name: string }>;
@@ -53,6 +37,6 @@ export type JustagramData = {
  * Internal type for all assets loaded by the app.
  * Includes scripts that are injected separately and not part of the JSON payload.
  */
-export type LoadedAssets = JustagramData & {
+export type LoadedAssets = Omit<JustagramData, 'settings' | 'profileState'> & {
   injectedScripts: string[];
 };

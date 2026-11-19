@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, jest, mock, test } from "bun:test";
 import { runInNewContext } from "node:vm";
 import { ProfileService } from "../src/app/services/ProfileService";
+import { SettingsService } from "../src/app/services/SettingsService";
+import { defaultSettings } from "../src/types/settings";
 import { BrowserService } from "../src/app/services/BrowserService";
 import type { LoadedAssets } from "../src/types";
 
@@ -40,16 +42,6 @@ const data: LoadedAssets = {
   cssRules: {} as LoadedAssets["cssRules"],
   cssGlobal: "",
   version: "test",
-  settings: {
-    hideReels: true,
-    hideStories: true,
-    hideExplore: true,
-    hideFeed: true,
-    hideSuggestedReels: true,
-    hideThreads: true,
-    hideNotes: true,
-    dmOnlyMode: true,
-  },
   injectedScripts: [
     "window.injectionCount = (window.injectionCount || 0) + 1;",
   ],
@@ -64,6 +56,7 @@ beforeEach(() => {
   appEvents = new EventTarget();
   Object.assign(globalThis, {
     localStorage: {
+      removeItem: (key: string) => storage.delete(key),
       getItem: (key: string) => storage.get(key) ?? null,
       setItem: (key: string, value: string) => storage.set(key, value),
     },
@@ -279,7 +272,7 @@ describe("native browser lifecycle", () => {
     expect(openBrowser.mock.calls[0]?.[2]).toContain(",dmonlyback=yes,");
     for (const enabled of [false, true, false]) {
       browser.emit("message", { data: {
-        type: "saveSettings", payload: { ...data.settings, dmOnlyMode: enabled },
+        type: "saveSettings", requestId: "back", key: "dmOnlyMode", enabled,
       } });
       expect(nativeCalls.at(-1)).toEqual({ action: "setDmOnlyBack", args: [enabled] });
     }
@@ -426,35 +419,32 @@ describe("native browser lifecycle", () => {
       jest.useRealTimers();
     }
   });
-  test("opens the inbox for an explicit DM Only toggle on Home after saving", async () => {
+  test("acknowledges the saved setting without reloading the active page", async () => {
     const browser = await openDefault();
-    const payload = { ...data.settings, dmOnlyMode: true };
-    const scriptCount = browser.scripts.length;
-    browser.emit("message", { data: { type: "saveSettings", payload } });
-    expect(browser.scripts).toHaveLength(scriptCount);
-
-    browser.emit("message", { data: { type: "saveSettings", payload, openInbox: true } });
-    const redirect = browser.scripts.at(-1)!;
-    const replace = mock(() => {});
-    const page = { location: { pathname: "/direct/t/example/", replace }, __JUSTAGRAM_DATA__: { settings: { ...payload } } };
-    runInNewContext(redirect, { window: page });
-    page.location.pathname = "/";
-    page.__JUSTAGRAM_DATA__.settings.dmOnlyMode = false;
-    runInNewContext(redirect, { window: page });
-    expect(replace).not.toHaveBeenCalled();
-
-    page.__JUSTAGRAM_DATA__.settings.dmOnlyMode = true;
-    expect(JSON.parse(storage.get("justagram_settings")!).dmOnlyMode).toBe(true);
-    runInNewContext(redirect, { window: page });
-    expect(replace).toHaveBeenCalledWith("/direct/inbox/");
+    browser.emit("message", { data: { type: "saveSettings", requestId: "home", key: "hideFeed", enabled: false } });
+    expect(SettingsService.load("default").hideFeed).toBe(false);
+    const received = mock((_event: Event) => {});
+    const page = new EventTarget();
+    page.addEventListener("justagram-settings-result", received);
+    runInNewContext(browser.scripts.at(-1)!, { window: page, CustomEvent });
+    expect((received.mock.calls[0]![0] as CustomEvent).detail).toMatchObject({ requestId: "home", settings: { hideFeed: false } });
   });
-  test("persists the visible Home setting without reloading the active page", async () => {
-    const browser = await openDefault();
-    const scriptCount = browser.scripts.length;
-    const payload = { ...data.settings, hideFeed: false };
-    browser.emit("message", { data: { type: "saveSettings", payload } });
-    expect(JSON.parse(storage.get("justagram_settings")!).hideFeed).toBe(false);
-    expect(browser.scripts).toHaveLength(scriptCount);
+
+  test("binds settings writes and reinjection to the open profile", async () => {
+    const work = ProfileService.createProfile("Work");
+    await BrowserService.open(data, work.id);
+    const browser = browsers[0]!;
+    const save = { type: "saveSettings", requestId: "lock", key: "commitmentMode", enabled: true, confirmed: true, profileId: "default" };
+    browser.emit("loadstart", { url: "https://example.com/" });
+    browser.emit("message", { data: save });
+    expect(SettingsService.load(work.id).commitmentMode).toBe(false);
+    browser.emit("loadstop", { url: "https://www.instagram.com/" });
+    browser.emit("message", { data: save });
+    browser.emit("loadstop", { url: "https://www.instagram.com/direct/" });
+    const page = { window: {} as any };
+    runInNewContext(browser.scripts.at(-1)!, page);
+    expect(page.window.__JUSTAGRAM_DATA__.settings.commitmentMode).toBe(true);
+    expect(SettingsService.load("default").commitmentMode).toBe(false);
   });
   test("load failure closes the browser and reports an actionable error", async () => {
     const error = mock(() => {});
@@ -465,5 +455,49 @@ describe("native browser lifecycle", () => {
     expect(error).toHaveBeenCalledTimes(1);
     await BrowserService.open(data, "default");
     expect(browsers).toHaveLength(2);
+  });
+});
+
+describe("profile filter settings", () => {
+  test("upgrading gives each existing profile an independent copy of the previous settings", () => {
+    const work = ProfileService.createProfile("Work");
+    storage.set("justagram_settings", JSON.stringify({ hideFeed: false, hideTopSection: false }));
+    ProfileService.ensureDefaultProfile();
+    const migrated = { ...defaultSettings, hideFeed: false, dmOnlyMode: false };
+    expect(SettingsService.load("default")).toEqual(migrated);
+    expect(SettingsService.load(work.id)).toEqual(migrated);
+    SettingsService.update(work.id, "hideFeed", true, false);
+    ProfileService.ensureDefaultProfile();
+    expect(SettingsService.load("default")).toEqual(migrated);
+    expect(SettingsService.load(work.id).hideFeed).toBe(true);
+    expect(SettingsService.load(ProfileService.createProfile("New").id)).toEqual(defaultSettings);
+  });
+
+  test("requires confirmation before locking existing or newly enabled filters", () => {
+    const update = (key: string, enabled: boolean, confirmed = false) =>
+      SettingsService.update(id, key, enabled, confirmed);
+    update("hideNotes", false);
+    expect(update("commitmentMode", true).commitmentMode).toBe(false);
+    expect(update("commitmentMode", true, true).commitmentMode).toBe(true);
+    expect(update("hideFeed", false, true).hideFeed).toBe(true);
+    expect(update("commitmentMode", false, true).commitmentMode).toBe(true);
+    expect(update("hideNotes", true).hideNotes).toBe(false);
+    expect(update("hideNotes", true, true).hideNotes).toBe(true);
+    expect(update("hideNotes", false).hideNotes).toBe(true);
+    expect(update("dmOnlyMode", false).dmOnlyMode).toBe(false);
+    expect(update("dmOnlyMode", true).dmOnlyMode).toBe(true);
+  });
+
+  test("a commitment survives rename and failed deletion, and ends with successful deletion", async () => {
+    const work = ProfileService.createProfile("Work");
+    SettingsService.update(work.id, "commitmentMode", true, true);
+    ProfileService.renameProfile(work.id, "Business");
+    nativeError = "Deletion failed";
+    await expect(ProfileService.removeProfile(work.id)).rejects.toThrow();
+    expect(SettingsService.load(work.id).commitmentMode).toBe(true);
+    nativeError = null;
+    await ProfileService.removeProfile(work.id);
+    expect(SettingsService.load(work.id)).toEqual(defaultSettings);
+    expect(SettingsService.load(ProfileService.createProfile("Business").id)).toEqual(defaultSettings);
   });
 });

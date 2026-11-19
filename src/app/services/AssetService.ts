@@ -1,5 +1,4 @@
-import type { CSSRules, LoadedAssets, Settings } from "../../types";
-import { SettingsService } from "./SettingsService";
+import type { CSSRules, LoadedAssets } from "../../types";
 import { AssetManifest } from "../generated/AssetManifest";
 import { AppVersion } from "../generated/Version";
 
@@ -56,7 +55,7 @@ export class AssetService {
       // Build cssRules object
       const cssRules: CSSRules = {} as CSSRules;
       cssFiles.forEach((file) => {
-        const key = file.name.replace('.css', '') as keyof Settings;
+        const key = file.name.replace('.css', '') as keyof CSSRules;
         cssRules[key] = file.content;
       });
 
@@ -67,7 +66,6 @@ export class AssetService {
         menuHTML,
         cssRules,
         cssGlobal,
-        settings: SettingsService.load(),
         version: AppVersion,
         injectedScripts: scripts,
       };

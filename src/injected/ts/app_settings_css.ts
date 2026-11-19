@@ -1,21 +1,10 @@
-import type { Settings } from '../../types';
+import type { CSSRules, Settings } from '../../types';
 
 (function() {
   const data = window.__JUSTAGRAM_DATA__;
   if (!data) return;
 
   const cssRules = data.cssRules;
-
-  const defaultSettings: Settings = {
-    hideReels: true,
-    hideStories: true,
-    hideExplore: true,
-    hideFeed: true,
-    hideSuggestedReels: true,
-    hideThreads: true,
-    hideNotes: true,
-    dmOnlyMode: true
-  };
 
   function applyStyles(settings: Settings): void {
     const styleId = 'justagram-dynamic-styles';
@@ -25,9 +14,9 @@ import type { Settings } from '../../types';
     }
 
     let css = '';
-    for (const key in settings) {
-      if (settings[key as keyof Settings] && cssRules[key as keyof Settings]) {
-        css += cssRules[key as keyof Settings] + ' ';
+    for (const key of Object.keys(cssRules) as Array<keyof CSSRules>) {
+      if (settings[key]) {
+        css += cssRules[key] + ' ';
       }
     }
 
@@ -40,10 +29,7 @@ import type { Settings } from '../../types';
   }
 
   // Initial apply
-  applyStyles({
-    ...defaultSettings,
-    ...(data.settings || {})
-  });
+  applyStyles(data.settings);
 
   // Listen for changes
   window.addEventListener('justagram-settings-changed', (event: any) => {

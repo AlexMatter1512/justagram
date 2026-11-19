@@ -1,44 +1,52 @@
-import type { Settings } from '../../types';
+import { defaultSettings, isLocked, isSettingKey, requiresConfirmation, type Settings } from "../../types/settings";
 
 export class SettingsService {
-  private static readonly STORAGE_KEY = 'justagram_settings';
+  private static readonly LEGACY_KEY = "justagram_settings";
 
-  private static readonly DEFAULT_SETTINGS: Settings = {
-    hideReels: true,
-    hideStories: true,
-    hideExplore: true,
-    hideFeed: true,
-    hideSuggestedReels: true,
-    hideThreads: true,
-    hideNotes: true,
-    dmOnlyMode: true
-  };
-
-  public static load(): Settings {
-    try {
-      const saved = localStorage.getItem(this.STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Partial<Settings> & { hideTopSection?: boolean };
-        const migrated = { ...parsed } as Partial<Settings>;
-        if (typeof parsed.hideTopSection === 'boolean' && typeof parsed.dmOnlyMode !== 'boolean') {
-          migrated.dmOnlyMode = parsed.hideTopSection;
-        }
-        return { ...this.DEFAULT_SETTINGS, ...migrated };
-      }
-    } catch (e) {
-      console.error("[JustAgram] Failed to load settings", e);
-    }
-    return { ...this.DEFAULT_SETTINGS };
+  private static profileKey(profileId: string): string {
+    return `justagram_settings_${profileId}`;
   }
 
-  public static save(settings: Settings): boolean {
-    try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(settings));
-      console.log("[JustAgram] Settings saved to main app storage");
-      return true;
-    } catch (e) {
-      console.error("[JustAgram] Failed to save settings", e);
-      return false;
+  public static migrateLegacySettings(profiles: Array<{ id: string }>): void {
+    const saved = localStorage.getItem(this.LEGACY_KEY);
+    if (saved === null) return;
+    for (const { id } of profiles) {
+      const key = this.profileKey(id);
+      if (localStorage.getItem(key) === null) localStorage.setItem(key, saved);
     }
+    localStorage.removeItem(this.LEGACY_KEY);
+  }
+
+  public static load(profileId: string): Settings {
+    const settings = { ...defaultSettings };
+    const raw = localStorage.getItem(this.profileKey(profileId));
+    try {
+      const saved = JSON.parse(raw ?? "{}");
+      if (typeof saved?.dmOnlyMode !== "boolean" && typeof saved?.hideTopSection === "boolean") {
+        settings.dmOnlyMode = saved.hideTopSection;
+      }
+      for (const key of Object.keys(settings) as Array<keyof Settings>) {
+        if (typeof saved?.[key] === "boolean") settings[key] = saved[key];
+      }
+    } catch (error) {
+      console.error("[JustAgram] Failed to read saved filters", error);
+    }
+    return settings;
+  }
+
+  public static update(profileId: string, key: unknown, enabled: unknown, confirmed: boolean): Settings {
+    const settings = this.load(profileId);
+    if (!isSettingKey(key) || typeof enabled !== "boolean" || settings[key] === enabled) return settings;
+    if (isLocked(settings, key) || (requiresConfirmation(settings, key) && !confirmed)) {
+      return settings;
+    }
+
+    settings[key] = enabled;
+    localStorage.setItem(this.profileKey(profileId), JSON.stringify(settings));
+    return settings;
+  }
+
+  public static removeProfile(profileId: string): void {
+    localStorage.removeItem(this.profileKey(profileId));
   }
 }

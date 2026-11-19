@@ -1,4 +1,4 @@
-import type { Settings } from '../../types';
+import { isLocked, isSettingKey, requiresConfirmation, type Settings } from '../../types/settings';
 
 (function() {
   'use strict';
@@ -13,39 +13,7 @@ import type { Settings } from '../../types';
     return;
   }
 
-  const menuButtonHTML = data.menuButtonHTML;
-  const menuHTML = data.menuHTML;
-
-  // Default settings (all hidden by default)
-  const defaultSettings: Settings = {
-    hideReels: true,
-    hideStories: true,
-    hideExplore: true,
-    hideFeed: true,
-    hideSuggestedReels: true,
-    hideThreads: true,
-    hideNotes: true,
-    dmOnlyMode: true
-  };
-
-  // Save settings by sending message to main app
-  function saveSettings(settings: Settings, openInbox: boolean): void {
-    try {
-      if (window.webkit?.messageHandlers?.cordova_iab) {
-        const message = JSON.stringify({
-          type: 'saveSettings',
-          payload: settings,
-          openInbox
-        });
-        window.webkit.messageHandlers.cordova_iab.postMessage(message);
-        console.log('[JustAgram] Settings saved to main app.');
-      } else {
-        console.warn('[JustAgram] Cannot save settings: message handler not found.');
-      }
-    } catch (e) {
-      console.error('[JustAgram] Failed to save settings:', e);
-    }
-  }
+  const pageData = data;
 
   function bindHomeLongPress(openMenu: () => void): void {
     const homeSelector = [
@@ -108,23 +76,20 @@ import type { Settings } from '../../types';
 
     // Inject menu button
     const btnContainer = document.createElement('div');
-    btnContainer.innerHTML = menuButtonHTML;
+    btnContainer.innerHTML = pageData.menuButtonHTML;
     document.body.appendChild(btnContainer.firstElementChild as Node);
 
     // Inject menu overlay
     const menuContainer = document.createElement('div');
-    menuContainer.innerHTML = menuHTML;
+    menuContainer.innerHTML = pageData.menuHTML;
     document.body.appendChild(menuContainer.firstElementChild as Node);
 
     // Update version
     const versionSpan = document.getElementById('jg-version');
-    if (versionSpan && data?.version) {
-      versionSpan.textContent = `v${data.version}`;
+    if (versionSpan) {
+      versionSpan.textContent = `v${pageData.version}`;
     }
 
-    // Use settings provided by main app
-    const settings = data?.settings;
-    
     const menuBtn = document.getElementById('justagram-menu-btn')!;
     const menuOverlay = document.getElementById('justagram-menu-overlay')!;
     const closeBtn = document.getElementById('justagram-close-btn')!;
@@ -141,8 +106,6 @@ import type { Settings } from '../../types';
 
     window.addEventListener('justagram-navigation', updateButtonVisibility);
     updateButtonVisibility();
-
-
 
     function openMenu(): void {
       (menuOverlay as HTMLElement).style.display = 'flex';
@@ -169,70 +132,112 @@ import type { Settings } from '../../types';
       }
     });
 
-    // Initialize toggles
-    const toggleItems = document.querySelectorAll('.justagram-toggle-item');
-    const currentSettings: Settings = {
-      ...defaultSettings,
-      ...(settings || {})
-    };
+    const rows = menuOverlay.querySelectorAll<HTMLLabelElement>('.justagram-toggle-item');
+    const warning = document.querySelector<HTMLDialogElement>('#jg-commit-warning')!;
+    const error = document.getElementById('jg-settings-error')!;
+    let warningKey: keyof Settings | undefined;
+    let pending: { id: string; openInbox: boolean; timer: number } | undefined;
 
-    function updateToggleVisibility(state: Settings): void {
-      const dmOnlyEnabled = state.dmOnlyMode;
-
-      toggleItems.forEach((item) => {
-        const key = item.getAttribute('data-key') as keyof Settings;
-        if (!key) return;
-
-        const shouldShow = !dmOnlyEnabled || key === 'hideNotes' || key === 'dmOnlyMode';
-        (item as HTMLElement).style.display = shouldShow ? 'flex' : 'none';
+    function renderSettings(): void {
+      const settings = pageData.settings;
+      rows.forEach(row => {
+        const key = row.dataset.key;
+        if (!isSettingKey(key)) return;
+        const input = row.querySelector('input')!;
+        const locked = isLocked(settings, key);
+        row.hidden = settings.dmOnlyMode && key !== 'dmOnlyMode' && key !== 'hideNotes' && key !== 'commitmentMode';
+        row.toggleAttribute('data-locked', locked);
+        input.checked = settings[key];
+        input.disabled = locked || !!pending;
       });
     }
 
-    toggleItems.forEach(function(item) {
-      const key = item.getAttribute('data-key') as keyof Settings;
-      const slider = item.querySelector('.justagram-slider') as HTMLElement;
+    function finishSave(message = ''): void {
+      window.clearTimeout(pending?.timer);
+      pending = undefined;
+      error.textContent = message;
+      renderSettings();
+    }
 
-      // Set initial state from saved settings
-      const isChecked = currentSettings[key];
-      updateSliderStyle(slider, isChecked);
+    function save(key: keyof Settings, confirmed: boolean): void {
+      const bridge = window.webkit?.messageHandlers?.cordova_iab;
+      if (!bridge) {
+        finishSave('Couldn’t reach JustAgram. Reopen the app and try again.');
+        return;
+      }
+      const id = crypto.randomUUID();
+      pending = {
+        id,
+        openInbox: key === 'dmOnlyMode' && !pageData.settings.dmOnlyMode && window.location.pathname === '/',
+        timer: window.setTimeout(() => finishSave('Save timed out. Please try again.'), 10000),
+      };
+      error.textContent = '';
+      renderSettings();
+      try {
+        bridge.postMessage(JSON.stringify({ type: 'saveSettings', requestId: id, key, enabled: !pageData.settings[key], confirmed }));
+      } catch {
+        finishSave('Couldn’t save this setting. Please try again.');
+      }
+    }
 
-      // Handle clicks on the entire toggle row
-      (item as HTMLElement).style.cursor = 'pointer';
-      item.addEventListener('click', function(e: Event) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Toggle the state
-        currentSettings[key] = !currentSettings[key];
-        console.log('[JustAgram] Toggle changed:', key, '->', currentSettings[key]);
-
-        updateSliderStyle(slider, currentSettings[key]);
-        updateToggleVisibility(currentSettings);
-        // Route handlers read this snapshot when navigating after a toggle.
-        if (data) data.settings = { ...currentSettings };
-        const openInbox = key === 'dmOnlyMode' && currentSettings.dmOnlyMode && window.location.pathname === '/';
-        saveSettings(currentSettings, openInbox);
-        window.dispatchEvent(new CustomEvent('justagram-settings-changed', { detail: currentSettings }));
-      });
+    window.addEventListener('justagram-settings-result', event => {
+      const result = (event as CustomEvent).detail;
+      if (!pending || result.requestId !== pending.id) return;
+      const { openInbox } = pending;
+      if (!result.settings) {
+        finishSave(result.error);
+        return;
+      }
+      pageData.settings = result.settings;
+      finishSave();
+      window.dispatchEvent(new CustomEvent('justagram-settings-changed', { detail: pageData.settings }));
+      if (openInbox && pageData.settings.dmOnlyMode && window.location.pathname === '/') {
+        window.location.replace('/direct/inbox/');
+      }
     });
 
-    updateToggleVisibility(currentSettings);
+    warning.addEventListener('close', () => {
+      const key = warningKey;
+      warningKey = undefined;
+      if (key && warning.returnValue === 'accept') save(key, true);
+    });
 
-    console.log('[JustAgram] Menu initialized.');
+    rows.forEach(row => {
+      const key = row.dataset.key;
+      if (!isSettingKey(key)) return;
+      row.querySelector('input')!.addEventListener('change', () => {
+        // Reflect only persisted settings, including while the user considers the warning.
+        renderSettings();
+        if (pending || warningKey || isLocked(pageData.settings, key)) return;
+        if (!requiresConfirmation(pageData.settings, key)) {
+          save(key, false);
+          return;
+        }
+
+        const name = row.querySelector('.jg-setting-name')!.textContent;
+        const activation = key === 'commitmentMode';
+        const reset = pageData.profileState?.activeId === 'default'
+          ? 'To reset the original profile, uninstall and reinstall JustAgram.'
+          : 'To reset, remove and re-add this profile or uninstall and reinstall JustAgram.';
+        document.getElementById('jg-warning-title')!.textContent = activation ? 'Enable Commitment Mode?' : `Lock ${name}?`;
+        let message = `The ${name} filter will stay on for this profile.`;
+        if (activation) {
+          const names = Array.from(rows).filter(row => {
+            const key = row.dataset.key;
+            return isSettingKey(key) && key !== 'dmOnlyMode' && pageData.settings[key];
+          }).map(row => row.querySelector('.jg-setting-name')!.textContent);
+          message = 'Commitment Mode will stay on for this profile. ';
+          if (names.length) message += `These enabled filters will lock immediately: ${names.join(', ')}. `;
+          message += 'Each filter you enable later will lock after confirmation. You can still switch DM Only Mode on or off.';
+        }
+        document.getElementById('jg-warning-message')!.textContent = `${message} ${reset}`;
+        warningKey = key;
+        warning.returnValue = '';
+        warning.showModal();
+      });
+    });
+    renderSettings();
   }
-
-  // Update slider visual style
-  function updateSliderStyle(slider: HTMLElement, isChecked: boolean): void {
-    if (isChecked) {
-      slider.style.backgroundColor = '#E1306C';
-      slider.innerHTML = '<span style="position:absolute;height:22px;width:22px;left:2px;bottom:3px;background-color:white;transition:.3s;border-radius:50%;transform:translateX(20px);"></span>';
-    } else {
-      slider.style.backgroundColor = '#363636';
-      slider.innerHTML = '<span style="position:absolute;height:22px;width:22px;left:2px;bottom:3px;background-color:white;transition:.3s;border-radius:50%;transform:translateX(0);"></span>';
-    }
-  }
-
-
 
   // Run init
   if (document.readyState === 'loading') {

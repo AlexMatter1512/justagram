@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Keep profile settings and commitments scoped to this installation. -->
+    <exclude domain="root" path="app_webview/Default/Local Storage" />
+</full-backup-content>

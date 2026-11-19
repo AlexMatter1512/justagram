@@ -1,6 +1,6 @@
 {
   "name": "justagram",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "module": "index.ts",
   "type": "module",
   "private": true,

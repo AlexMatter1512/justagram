@@ -87,7 +87,14 @@ creating, and renaming profiles leave the current page open. Opening a different
 profile replaces the native browser so its isolated session is used.
 
 The menu is also available on Instagram's login/account pages, so you can leave a
-new profile before signing in. Filter preferences currently apply to all profiles.
+new profile before signing in. Each profile has its own filter preferences. When upgrading from shared preferences,
+existing profiles inherit the previous settings. New profiles start with the defaults.
+
+Enable **Commitment Mode** in settings to lock the filters already enabled on that
+profile. The warning lists the filters that will lock. Enabling another filter
+requires confirmation, and DM Only Mode stays adjustable. To reset a commitment,
+delete and re-add the profile or reinstall JustAgram. The original profile can
+only be reset by reinstalling.
 
 Profile names and stable IDs are saved by `ProfileService` in the app's local
 storage. Login cookies are not copied into JavaScript storage. Each additional
