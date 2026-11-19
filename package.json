@@ -37,5 +37,8 @@
     "@capacitor/ios": "^8.0.0",
     "@capacitor/status-bar": "^8.0.0",
     "cordova-plugin-inappbrowser": "github:AlexMatter1512/cordova-plugin-inappbrowser#46961a3822948dfdd48875cb8508d0ff9b837939"
+  },
+  "patchedDependencies": {
+    "cordova-plugin-inappbrowser@github:AlexMatter1512/cordova-plugin-inappbrowser#46961a3": "patches/cordova-plugin-inappbrowser@github%3AAlexMatter1512%2Fcordova-plugin-inappbrowser#46961a3.patch"
   }
 }

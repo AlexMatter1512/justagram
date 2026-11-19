@@ -1,0 +1,108 @@
+diff --git a/src/android/InAppBrowser.java b/src/android/InAppBrowser.java
+index a6115b049ee384e46b79ace02eb9096d25539c94..b011cd1e6c3406c0a59f9fc5c73222ffd096194e 100644
+--- a/src/android/InAppBrowser.java
++++ b/src/android/InAppBrowser.java
+@@ -31,6 +31,7 @@ import android.content.res.Resources;
+ import android.graphics.Bitmap;
+ import android.graphics.drawable.Drawable;
+ import android.graphics.Color;
++import android.graphics.Insets;
+ import android.net.http.SslError;
+ import android.net.Uri;
+ import android.os.Build;
+@@ -42,6 +43,9 @@ import android.view.Gravity;
+ import android.view.KeyEvent;
+ import android.view.View;
+ import android.view.Window;
++import android.view.WindowInsets;
++import android.view.WindowInsetsAnimation;
++import android.view.WindowInsetsController;
+ import android.view.WindowManager;
+ import android.view.WindowManager.LayoutParams;
+ import android.view.inputmethod.EditorInfo;
+@@ -936,17 +940,16 @@ public class InAppBrowser extends CordovaPlugin {
+ 
+                 // Let's create the main dialog
+                 dialog = new InAppBrowserDialog(cordova.getActivity(), android.R.style.Theme_NoTitleBar);
+-                dialog.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
++                Window window = dialog.getWindow();
++                window.getAttributes().windowAnimations = android.R.style.Animation_Dialog;
+                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+-                if (fullscreen) {
+-                    dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+-                }
+                 dialog.setCancelable(true);
+                 dialog.setInAppBroswer(getInAppBrowser());
+ 
+                 // Main container layout
+                 LinearLayout main = new LinearLayout(cordova.getActivity());
+                 main.setOrientation(LinearLayout.VERTICAL);
++                configureDialogInsets(window, main);
+ 
+                 // Toolbar layout
+                 RelativeLayout toolbar = new RelativeLayout(cordova.getActivity());
+@@ -1285,7 +1288,13 @@ public class InAppBrowser extends CordovaPlugin {
+                 if (dialog != null) {
+                     dialog.setContentView(main);
+                     dialog.show();
+-                    dialog.getWindow().setAttributes(lp);
++                    window.setAttributes(lp);
++                    if (fullscreen && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
++                        WindowInsetsController controller = window.getInsetsController();
++                        if (controller != null) {
++                            controller.hide(WindowInsets.Type.statusBars());
++                        }
++                    }
+                 }
+                 // the goal of openhidden is to load the url and not display it
+                 // Show() needs to be called to cause the URL to be loaded
+@@ -1298,6 +1307,49 @@ public class InAppBrowser extends CordovaPlugin {
+         return "";
+     }
+ 
++    private void configureDialogInsets(Window window, LinearLayout content) {
++        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
++            // FLAG_FULLSCREEN prevents the window from resizing for the keyboard.
++            if (fullscreen) {
++                View decor = window.getDecorView();
++                decor.setSystemUiVisibility(decor.getSystemUiVisibility() | View.SYSTEM_UI_FLAG_FULLSCREEN);
++            }
++            window.setSoftInputMode(LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
++            return;
++        }
++
++        window.setDecorFitsSystemWindows(false);
++        window.setSoftInputMode(LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
++        content.setOnApplyWindowInsetsListener(InAppBrowser::applyDialogInsets);
++        content.setWindowInsetsAnimationCallback(new WindowInsetsAnimation.Callback(
++            WindowInsetsAnimation.Callback.DISPATCH_MODE_CONTINUE_ON_SUBTREE
++        ) {
++            @Override
++            public WindowInsets onProgress(WindowInsets insets, List<WindowInsetsAnimation> runningAnimations) {
++                // The initial inset dispatch is for the target state, before Gboard moves.
++                // Resize the WebView as the keyboard actually enters or leaves the window.
++                return applyDialogInsets(content, insets);
++            }
++
++            @Override
++            public void onEnd(WindowInsetsAnimation animation) {
++                if ((animation.getTypeMask() & WindowInsets.Type.ime()) != 0) {
++                    content.requestApplyInsets();
++                }
++            }
++        });
++    }
++
++    @TargetApi(Build.VERSION_CODES.R)
++    private static WindowInsets applyDialogInsets(View view, WindowInsets insets) {
++        Insets padding = insets.getInsets(
++            WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime()
++        );
++        view.setPadding(padding.left, padding.top, padding.right, padding.bottom);
++        // The native layout already fits these insets. Pass only the remainder to the WebView.
++        return insets.inset(padding.left, padding.top, padding.right, padding.bottom);
++    }
++
+     /**
+      * Create a new plugin success result and send it back to JavaScript
+      *
