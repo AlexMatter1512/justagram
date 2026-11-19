@@ -104,7 +104,7 @@ The InAppBrowser extensions are maintained in the
 [plugin fork](https://github.com/AlexMatter1512/cordova-plugin-inappbrowser),
 pinned to a commit in `package.json`. They include script injection, the
 `profile` browser option, and `checkProfile` / `removeProfile` native actions.
-Bun applies the Android keyboard-insets patch from `patches/` when installing the
+Bun applies the Android keyboard and DM-only Back handling patch from `patches/` when installing the
 pinned fork. Rebase or remove that patch as appropriate when updating the
 dependency, then run `bun install`, `bun run sync`, and rebuild the native app.
 The ignored `cordova-plugin-inappbrowser/` directory can hold a local checkout

@@ -25,10 +25,13 @@ export class BrowserService {
       // Native preflight must succeed before changing the remembered selection.
       if (!ProfileService.getProfiles().some(profile => profile.id === profileId))
         throw new Error("Choose an existing profile.");
+      const backOption = cordova.platformId === "android"
+        ? `,dmonlyback=${SettingsService.load().dmOnlyMode ? "yes" : "no"}`
+        : "";
       this.browser = cordova.InAppBrowser.open(
         this.INSTAGRAM_URL,
         "_blank",
-        `${this.BROWSER_OPTIONS},profile=${profileId}`,
+        `${this.BROWSER_OPTIONS}${backOption},profile=${profileId}`,
       );
       ProfileService.setActiveProfile(profileId);
       this.setupEventListeners(this.browser, data, profileId, notice);
@@ -59,9 +62,18 @@ export class BrowserService {
       const message = event.data;
       if (!message) return;
       try {
-        if (message.type === "saveSettings" && message.payload) {
+        if (message.type === "saveSettings" && message.payload && instagramPage) {
           const saved = SettingsService.save(message.payload);
-          if (!saved || !instagramPage) return;
+          if (!saved) return;
+          if (cordova.platformId === "android") {
+            cordova.exec(
+              () => {},
+              error => console.error("[JustAgram] Could not update Android Back", error),
+              "InAppBrowser",
+              "setDmOnlyBack",
+              [message.payload.dmOnlyMode === true],
+            );
+          }
           if (message.openInbox === true && message.payload.dmOnlyMode === true) {
             browser.insertScript({ code: `
               if (window.location.pathname === '/' && window.__JUSTAGRAM_DATA__?.settings.dmOnlyMode === true) {

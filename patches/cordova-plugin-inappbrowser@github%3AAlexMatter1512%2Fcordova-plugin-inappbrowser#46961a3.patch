@@ -1,5 +1,5 @@
 diff --git a/src/android/InAppBrowser.java b/src/android/InAppBrowser.java
-index a6115b049ee384e46b79ace02eb9096d25539c94..b011cd1e6c3406c0a59f9fc5c73222ffd096194e 100644
+index a6115b049ee384e46b79ace02eb9096d25539c94..ee4787e7f17821c87b796dc910b1629893b7c8b1 100644
 --- a/src/android/InAppBrowser.java
 +++ b/src/android/InAppBrowser.java
 @@ -31,6 +31,7 @@ import android.content.res.Resources;
@@ -20,7 +20,100 @@ index a6115b049ee384e46b79ace02eb9096d25539c94..b011cd1e6c3406c0a59f9fc5c73222ff
  import android.view.WindowManager;
  import android.view.WindowManager.LayoutParams;
  import android.view.inputmethod.EditorInfo;
-@@ -936,17 +940,16 @@ public class InAppBrowser extends CordovaPlugin {
+@@ -56,6 +60,7 @@ import android.webkit.HttpAuthHandler;
+ import android.webkit.JavascriptInterface;
+ import android.webkit.SslErrorHandler;
+ import android.webkit.ValueCallback;
++import android.webkit.WebBackForwardList;
+ import android.webkit.WebChromeClient;
+ import android.webkit.WebResourceRequest;
+ import android.webkit.WebResourceResponse;
+@@ -142,6 +147,7 @@ public class InAppBrowser extends CordovaPlugin {
+     private boolean clearAllCache = false;
+     private boolean clearSessionCache = false;
+     private boolean hadwareBackButton = true;
++    private boolean dmOnlyBack;
+     private boolean mediaPlaybackRequiresUserGesture = false;
+     private boolean shouldPauseInAppBrowser = false;
+     private boolean useWideViewPort = true;
+@@ -170,6 +176,14 @@ public class InAppBrowser extends CordovaPlugin {
+      * @return A PluginResult object with a status and message.
+      */
+     public boolean execute(String action, CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
++        if (action.equals("setDmOnlyBack")) {
++            final boolean enabled = args.getBoolean(0);
++            cordova.getActivity().runOnUiThread(() -> {
++                dmOnlyBack = enabled;
++                callbackContext.success();
++            });
++            return true;
++        }
+         if (action.equals("removeProfile")) {
+             final String profile = args.getString(0);
+             cordova.getActivity().runOnUiThread(() -> {
+@@ -474,7 +488,8 @@ public class InAppBrowser extends CordovaPlugin {
+      *                    which should be executed directly.
+      */
+     private void injectDeferredObject(String source, String jsWrapper) {
+-        if (inAppWebView!=null) {
++        final WebView target = inAppWebView;
++        if (target != null) {
+             String scriptToInject;
+             if (jsWrapper != null) {
+                 org.json.JSONArray jsonEsc = new org.json.JSONArray();
+@@ -490,7 +505,9 @@ public class InAppBrowser extends CordovaPlugin {
+                 @SuppressLint("NewApi")
+                 @Override
+                 public void run() {
+-                    inAppWebView.evaluateJavascript(finalScriptToInject, null);
++                    if (target == inAppWebView) {
++                        target.evaluateJavascript(finalScriptToInject, null);
++                    }
+                 }
+             });
+         } else {
+@@ -657,3 +674,32 @@ public class InAppBrowser extends CordovaPlugin {
++    public void handleHardwareBack() {
++        if (!hardwareBack() || !canGoBack()) {
++            closeDialog();
++            return;
++        }
++        if (dmOnlyBack && isDirectUrl(inAppWebView.getUrl())) {
++            WebBackForwardList history = inAppWebView.copyBackForwardList();
++            int previous = history.getCurrentIndex() - 1;
++            if (previous < 0 || !isDirectUrl(history.getItemAtIndex(previous).getUrl())) {
++                closeDialog();
++                return;
++            }
++            // Traverse exactly the DM entry we checked.
++            inAppWebView.goBackOrForward(-1);
++            return;
++        }
++        goBack();
++    }
++
++    private static boolean isDirectUrl(String url) {
++        if (url == null) return false;
++        Uri uri = Uri.parse(url);
++        String host = uri.getHost();
++        String path = uri.getEncodedPath();
++        return "https".equals(uri.getScheme()) && host != null &&
++            (host.equals("instagram.com") || host.endsWith(".instagram.com")) &&
++            ("/direct".equals(path) || (path != null && path.startsWith("/direct/")));
++    }
++
+     /**
+      * Has the user set the hardware back button to go back
+      * @return boolean
+@@ -741,6 +787,7 @@ public class InAppBrowser extends CordovaPlugin {
+      * @param features jsonObject
+      */
+     public String showWebPage(final String url, HashMap<String, String> features) {
++        dmOnlyBack = features != null && "yes".equals(features.get("dmonlyback"));
+         final String profile = features == null ? "default" : features.getOrDefault("profile", "default");
+         // Determine if we should hide the location bar.
+         showLocationBar = true;
+@@ -936,17 +983,16 @@ public class InAppBrowser extends CordovaPlugin {
  
                  // Let's create the main dialog
                  dialog = new InAppBrowserDialog(cordova.getActivity(), android.R.style.Theme_NoTitleBar);
@@ -41,7 +134,7 @@ index a6115b049ee384e46b79ace02eb9096d25539c94..b011cd1e6c3406c0a59f9fc5c73222ff
  
                  // Toolbar layout
                  RelativeLayout toolbar = new RelativeLayout(cordova.getActivity());
-@@ -1285,7 +1288,13 @@ public class InAppBrowser extends CordovaPlugin {
+@@ -1285,7 +1331,13 @@ public class InAppBrowser extends CordovaPlugin {
                  if (dialog != null) {
                      dialog.setContentView(main);
                      dialog.show();
@@ -56,7 +149,7 @@ index a6115b049ee384e46b79ace02eb9096d25539c94..b011cd1e6c3406c0a59f9fc5c73222ff
                  }
                  // the goal of openhidden is to load the url and not display it
                  // Show() needs to be called to cause the URL to be loaded
-@@ -1298,6 +1307,49 @@ public class InAppBrowser extends CordovaPlugin {
+@@ -1298,6 +1350,49 @@ public class InAppBrowser extends CordovaPlugin {
          return "";
      }
  
@@ -106,3 +199,20 @@ index a6115b049ee384e46b79ace02eb9096d25539c94..b011cd1e6c3406c0a59f9fc5c73222ff
      /**
       * Create a new plugin success result and send it back to JavaScript
       *
+diff --git a/src/android/InAppBrowserDialog.java b/src/android/InAppBrowserDialog.java
+index 88b20e461e504dc944c4ce78887ab5bba406ad83..a14dae5f1be7f845fdb06cb7e023847aad8fa6e1 100644
+--- a/src/android/InAppBrowserDialog.java
++++ b/src/android/InAppBrowserDialog.java
+@@ -48,11 +48,7 @@ public class InAppBrowserDialog extends Dialog {
+         } else {
+             // better to go through the in inAppBrowser
+             // because it does a clean up
+-            if (this.inAppBrowser.hardwareBack() && this.inAppBrowser.canGoBack()) {
+-                this.inAppBrowser.goBack();
+-            }  else {
+-                this.inAppBrowser.closeDialog();
+-            }
++            this.inAppBrowser.handleHardwareBack();
+         }
+     }
+ }

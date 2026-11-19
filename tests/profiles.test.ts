@@ -273,6 +273,20 @@ describe("native browser lifecycle", () => {
     browser.emit("loadstop", { url: "https://www.instagram.com/direct/" });
     return browser;
   }
+  test("Android Back follows the current DM-only preference across toggles and browser opens", async () => {
+    cordova.platformId = "android";
+    const browser = await openDefault();
+    expect(openBrowser.mock.calls[0]?.[2]).toContain(",dmonlyback=yes,");
+    for (const enabled of [false, true, false]) {
+      browser.emit("message", { data: {
+        type: "saveSettings", payload: { ...data.settings, dmOnlyMode: enabled },
+      } });
+      expect(nativeCalls.at(-1)).toEqual({ action: "setDmOnlyBack", args: [enabled] });
+    }
+    await BrowserService.close();
+    await openDefault();
+    expect(openBrowser.mock.calls[1]?.[2]).toContain(",dmonlyback=no,");
+  });
   test("opening the manager keeps the current browser and supplies profile metadata", async () => {
     const closed = mock(() => {});
     appEvents.addEventListener("justagram-browser-closed", closed);
