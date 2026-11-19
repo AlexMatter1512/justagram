@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, jest, mock, test } from "bun:test";
 import { runInNewContext } from "node:vm";
 import { ProfileService } from "../src/app/services/ProfileService";
 import { BrowserService } from "../src/app/services/BrowserService";
@@ -394,6 +394,24 @@ describe("native browser lifecycle", () => {
     expect(nextPage.window.__JUSTAGRAM_DATA__).not.toHaveProperty(
       "injectedScripts",
     );
+  });
+  test("keeps the two-step login page open while the user checks email", async () => {
+    jest.useFakeTimers();
+    try {
+      const browser = await openDefault();
+      const exit = mock(() => {});
+      browser.addEventListener("exit", exit);
+      const challenge = { url: "https://www.instagram.com/accounts/login/two_factor/" };
+      browser.emit("loadstart", challenge);
+      browser.emit("loadstop", challenge);
+
+      // A backgrounded WebView can stop sending messages while the user is away.
+      jest.advanceTimersByTime(30_000);
+      expect(exit).not.toHaveBeenCalled();
+      expect(openBrowser).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
   test("load failure closes the browser and reports an actionable error", async () => {
     const error = mock(() => {});
