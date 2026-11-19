@@ -1,3 +1,5 @@
+/* Remove the empty flex item so the bottom bar spaces only visible tabs. */
+div:has(> span:only-child > div:only-child > a[href="/reels/"]:only-child),
 a[href="/reels/"],
 a[href*="reels"],
 a:has(svg[aria-label*="Reels"]),

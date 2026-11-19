@@ -1,0 +1,54 @@
+/* Android starts a native URL drag before the Home hold can open settings. */
+:is(
+  #justagram-direct-nav,
+  div:has(> div > span > div > a[href="/explore/"]):has(a[href="/direct/inbox/"])
+) :is(a, a img),
+a[href="/"]:has(svg[aria-label="Home" i]) {
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+body:has(> #justagram-direct-nav) {
+  --jg-nav-height: calc(49px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Instagram's fixed Messenger pane contains both the list and the composer. */
+body:has(> #justagram-direct-nav) section > div[style*="--messenger-card-background"] > div > div:first-child {
+  height: calc(100% - var(--jg-nav-height)) !important;
+  min-height: 0 !important;
+  bottom: var(--jg-nav-height) !important;
+}
+
+#justagram-direct-nav {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  box-sizing: border-box;
+  height: var(--jg-nav-height);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid rgb(var(--ig-separator, 219, 219, 219));
+  background: rgb(var(--ig-primary-background, 255, 255, 255));
+  color: rgb(var(--ig-primary-icon, 0, 0, 0));
+}
+
+#justagram-direct-nav a {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  color: inherit;
+}
+
+#justagram-direct-nav svg,
+#justagram-direct-nav img {
+  width: 24px;
+  height: 24px;
+}
+
+#justagram-direct-nav img {
+  border-radius: 50%;
+  object-fit: cover;
+}

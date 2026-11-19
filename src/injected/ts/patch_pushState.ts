@@ -15,6 +15,7 @@ function getPathFromUrl(url?: string | URL | null): string {
 // --- DOM Handlers ---
 
 function handleNavigation(path: string) {
+  window.dispatchEvent(new Event('justagram-navigation'));
   const handler = window.JustagramDOMHandlers[path];
   if (handler) {
     handler();

@@ -46,6 +46,61 @@ import type { Settings } from '../../types';
     }
   }
 
+  function bindHomeLongPress(openMenu: () => void): void {
+    const homeSelector = [
+      '#justagram-direct-nav a[href="/"]',
+      'a[href="/"]:has(svg[aria-label="Home" i])',
+      // Identify Instagram's Home tab by its sibling inbox tab in other locales.
+      'div:has(> div > span > div > a[href="/explore/"]):has(a[href="/direct/inbox/"]) a[href="/"]',
+    ].join(', ');
+    let press: PointerEvent | undefined;
+    let timer = 0;
+    let handled = false;
+
+    function cancelPress(): void {
+      window.clearTimeout(timer);
+      press = undefined;
+    }
+
+    window.addEventListener('pointerdown', event => {
+      cancelPress();
+      handled = false;
+      if (!event.isPrimary || event.button !== 0 || !(event.target instanceof Element)) return;
+      if (!event.target.closest(homeSelector)) return;
+      press = event;
+      timer = window.setTimeout(() => {
+        // Instagram can replace the tab element during a route transition.
+        if (document.elementFromPoint(event.clientX, event.clientY)?.closest(homeSelector)) {
+          handled = true;
+          openMenu();
+        }
+      }, 500);
+    }, true);
+
+    window.addEventListener('pointermove', event => {
+      if (press?.pointerId === event.pointerId &&
+          Math.hypot(event.clientX - press.clientX, event.clientY - press.clientY) > 10) {
+        cancelPress();
+      }
+    }, true);
+    window.addEventListener('pointerup', cancelPress, true);
+    window.addEventListener('pointercancel', cancelPress, true);
+    window.addEventListener('blur', cancelPress);
+    window.addEventListener('pagehide', cancelPress);
+
+    window.addEventListener('contextmenu', event => {
+      if (press || handled) event.preventDefault();
+    }, true);
+    // Releasing a held link can generate a click on Home or on the new overlay.
+    window.addEventListener('click', event => {
+      if (handled && event.detail > 0) {
+        handled = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    }, true);
+  }
+
   // Initialize menu
   function initMenu(): void {
     console.log('[JustAgram] Initializing menu...');
@@ -112,6 +167,7 @@ import type { Settings } from '../../types';
 
     // Open menu
     menuBtn.addEventListener('click', openMenu);
+    bindHomeLongPress(openMenu);
 
     // Close menu
     closeBtn.addEventListener('click', function() {
