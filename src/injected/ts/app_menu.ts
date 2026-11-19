@@ -29,12 +29,13 @@ import type { Settings } from '../../types';
   };
 
   // Save settings by sending message to main app
-  function saveSettings(settings: Settings): void {
+  function saveSettings(settings: Settings, openInbox: boolean): void {
     try {
       if (window.webkit?.messageHandlers?.cordova_iab) {
         const message = JSON.stringify({
           type: 'saveSettings',
-          payload: settings
+          payload: settings,
+          openInbox
         });
         window.webkit.messageHandlers.cordova_iab.postMessage(message);
         console.log('[JustAgram] Settings saved to main app.');
@@ -129,30 +130,17 @@ import type { Settings } from '../../types';
     const closeBtn = document.getElementById('justagram-close-btn')!;
 
     // Helper to toggle visibility based on URL
-    function updateButtonVisibility(url: string) {
-      if (url.includes('/accounts/') || url.includes('/challenge/') || url.includes('/checkpoint/')) {
+    function updateButtonVisibility() {
+      const path = window.location.pathname;
+      if (path === '/' || path.includes('/accounts/') || path.includes('/challenge/') || path.includes('/checkpoint/')) {
         menuBtn.style.display = 'flex';
       } else {
         menuBtn.style.display = 'none';
       }
     }
 
-    // Handle clicks for navigation
-    document.addEventListener('click', function(e) {
-      // Find closest anchor tag
-      const target = (e.target as HTMLElement).closest('a');
-      if (target && target.href) {
-        updateButtonVisibility(target.href);
-      }
-    });
-
-    // Handle back/forward navigation
-    window.addEventListener('popstate', function() {
-      updateButtonVisibility(window.location.href);
-    });
-
-    // Check initial URL (in case we reload on the settings page)
-    updateButtonVisibility(window.location.href);
+    window.addEventListener('justagram-navigation', updateButtonVisibility);
+    updateButtonVisibility();
 
 
 
@@ -222,7 +210,8 @@ import type { Settings } from '../../types';
         updateToggleVisibility(currentSettings);
         // Route handlers read this snapshot when navigating after a toggle.
         if (data) data.settings = { ...currentSettings };
-        saveSettings(currentSettings);
+        const openInbox = key === 'dmOnlyMode' && currentSettings.dmOnlyMode && window.location.pathname === '/';
+        saveSettings(currentSettings, openInbox);
         window.dispatchEvent(new CustomEvent('justagram-settings-changed', { detail: currentSettings }));
       });
     });

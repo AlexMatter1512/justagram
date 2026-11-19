@@ -50,7 +50,8 @@ declare global {
 
   interface JustagramBlockerAPI {
     add: (substring: string) => void;
-    clear: () => void;
+    /** Clear the rules and report whether they actually rejected a request. */
+    clear: () => boolean;
     print: () => void;
     isBlocked: (url: string) => boolean;
   }

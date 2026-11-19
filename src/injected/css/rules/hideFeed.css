@@ -1,0 +1,5 @@
+/* Keep the feed mounted and preserve its scroll position while hidden. */
+html.justagram-home :is(main, [role="main"]),
+html.justagram-home :is(main, [role="main"]) * {
+  visibility: hidden !important;
+}

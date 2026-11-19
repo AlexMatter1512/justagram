@@ -1,50 +1,37 @@
-(function() {
-  window.JustagramDOMHandlers = window.JustagramDOMHandlers || {};
+(function () {
+  const data = window.__JUSTAGRAM_DATA__;
+  if (!data) return;
 
-  window.JustagramDOMHandlers['/'] = function handleHome() {
-    console.log("[JustAgram] Handling DOM for Home page");
+  let visibilitySaved = data.settings.hideFeed === false;
+  let needsReload = false;
 
-    const data = window.__JUSTAGRAM_DATA__;
-    const settings = data?.settings;
-    const blockMap = data?.blockMap;
+  function updateHome() {
+    const onHome = window.location.pathname === '/';
+    const hidden = data!.settings.hideFeed !== false;
+    document.documentElement.classList.toggle('justagram-home', onHome);
 
-    if (settings && settings.hideFeed === false) {
-      console.log("[JustAgram] Home feed hiding is disabled. Skipping DOM removal.");
-      return;
-    }
-
-    if (blockMap && blockMap['/'] && window.JustagramBlocker) {
-      blockMap['/'].forEach((substring) => {
-        window.JustagramBlocker.add(substring);
-      });
-      console.log(`[JustAgram] Applied blocks for Home:`, blockMap['/']);
-    }
-
-    try {
-      const main = document.querySelector("main");
-
-      if (main) {
-        // delete main node
-        main.remove();
-        console.log("[JustAgram] Cleared all content inside <main>");
-      } else {
-        console.warn("[JustAgram] No <main> element found waiting for it to load...");
-        // If main is not found, we can set up a MutationObserver to wait for it
-        const observer = new MutationObserver((mutations, obs) => {
-          const main = document.querySelector("main");
-          if (main) {
-            main.remove();
-            console.log("[JustAgram] Cleared all content inside <main> (after waiting)");
-            obs.disconnect();
-          }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
+    const blocker = window.JustagramBlocker;
+    if (!blocker) return;
+    if (onHome && hidden) {
+      for (const pattern of data!.blockMap['/'] || []) blocker.add(pattern);
+    } else {
+      // A failed feed request can stay cached across SPA navigation back to Home.
+      if (blocker.clear()) needsReload = true;
+      if (onHome && !hidden && visibilitySaved && needsReload) {
+        needsReload = false;
+        window.location.reload();
       }
-
-    } catch (e) {
-      console.error("[JustAgram] Error handling Home page DOM", e);
     }
-  };
+  }
 
-  console.log('[JustAgram] Registered handler for /');
+  window.addEventListener('justagram-navigation', updateHome);
+  window.addEventListener('justagram-settings-changed', () => {
+    if (data.settings.hideFeed) visibilitySaved = false;
+    updateHome();
+  });
+  window.addEventListener('justagram-feed-visible-saved', () => {
+    visibilitySaved = data.settings.hideFeed === false;
+    updateHome();
+  });
+  updateHome();
 })();

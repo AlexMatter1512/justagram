@@ -31,12 +31,14 @@ export class SettingsService {
     return { ...this.DEFAULT_SETTINGS };
   }
 
-  public static save(settings: Settings): void {
+  public static save(settings: Settings): boolean {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(settings));
       console.log("[JustAgram] Settings saved to main app storage");
+      return true;
     } catch (e) {
       console.error("[JustAgram] Failed to save settings", e);
+      return false;
     }
   }
 }

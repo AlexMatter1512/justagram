@@ -413,6 +413,45 @@ describe("native browser lifecycle", () => {
       jest.useRealTimers();
     }
   });
+  test("opens the inbox for an explicit DM Only toggle on Home after saving", async () => {
+    const browser = await openDefault();
+    const payload = { ...data.settings, dmOnlyMode: true };
+    const scriptCount = browser.scripts.length;
+    browser.emit("message", { data: { type: "saveSettings", payload } });
+    expect(browser.scripts).toHaveLength(scriptCount);
+
+    browser.emit("message", { data: { type: "saveSettings", payload, openInbox: true } });
+    const redirect = browser.scripts.at(-1)!;
+    const replace = mock(() => {});
+    const page = { location: { pathname: "/direct/t/example/", replace }, __JUSTAGRAM_DATA__: { settings: { ...payload } } };
+    runInNewContext(redirect, { window: page });
+    page.location.pathname = "/";
+    page.__JUSTAGRAM_DATA__.settings.dmOnlyMode = false;
+    runInNewContext(redirect, { window: page });
+    expect(replace).not.toHaveBeenCalled();
+
+    page.__JUSTAGRAM_DATA__.settings.dmOnlyMode = true;
+    expect(JSON.parse(storage.get("justagram_settings")!).dmOnlyMode).toBe(true);
+    runInNewContext(redirect, { window: page });
+    expect(replace).toHaveBeenCalledWith("/direct/inbox/");
+  });
+  test("confirms the visible Home setting to the page only after it is persisted", async () => {
+    const browser = await openDefault();
+    const saveVisible = { data: { type: "saveSettings", payload: { ...data.settings, hideFeed: false } } };
+    const page = new EventTarget();
+    const saved = mock(() => {
+      expect(JSON.parse(storage.get("justagram_settings")!).hideFeed).toBe(false);
+    });
+    page.addEventListener("justagram-feed-visible-saved", saved);
+    browser.emit("message", saveVisible);
+    runInNewContext(browser.scripts.at(-1)!, { window: page, Event });
+    expect(saved).toHaveBeenCalledTimes(1);
+
+    const scriptCount = browser.scripts.length;
+    Object.assign(localStorage, { setItem() { throw new Error("Storage unavailable"); } });
+    browser.emit("message", saveVisible);
+    expect(browser.scripts).toHaveLength(scriptCount);
+  });
   test("load failure closes the browser and reports an actionable error", async () => {
     const error = mock(() => {});
     appEvents.addEventListener("justagram-browser-error", error);

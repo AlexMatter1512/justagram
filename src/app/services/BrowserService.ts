@@ -60,7 +60,17 @@ export class BrowserService {
       if (!message) return;
       try {
         if (message.type === "saveSettings" && message.payload) {
-          SettingsService.save(message.payload);
+          const saved = SettingsService.save(message.payload);
+          if (!saved || !instagramPage) return;
+          if (message.openInbox === true && message.payload.dmOnlyMode === true) {
+            browser.insertScript({ code: `
+              if (window.location.pathname === '/' && window.__JUSTAGRAM_DATA__?.settings.dmOnlyMode === true) {
+                window.location.replace('/direct/inbox/');
+              }
+            ` });
+          } else if (message.payload.hideFeed === false) {
+            browser.insertScript({ code: "window.dispatchEvent(new Event('justagram-feed-visible-saved'));" });
+          }
         } else if (
           message.type === "updateBackgroundColor" &&
           message.payload

@@ -1,4 +1,0 @@
-/* removed since the js approach is more robust */
-main div:has(> article:nth-child(2)) {
-  display: none !important;
-}

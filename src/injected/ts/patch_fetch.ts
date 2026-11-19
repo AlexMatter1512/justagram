@@ -6,6 +6,7 @@
   
   // The active blocklist for the current page
   const blocklist = new Set<string>();
+  let blockedRequest = false;
 
   // Expose the API
   window.JustagramBlocker = {
@@ -14,10 +15,13 @@
       console.log(`[JustAgram] 🚫 Blocking substring: "${substring}"`);
     },
     clear: () => {
+      const hadBlockedRequest = blockedRequest;
+      blockedRequest = false;
       if (blocklist.size > 0) {
         console.log(`[JustAgram] 🧹 Clearing blocklist (${blocklist.size} items)`);
         blocklist.clear();
       }
+      return hadBlockedRequest;
     },
     isBlocked: (url: string) => {
       for (const substring of blocklist) {
@@ -57,6 +61,7 @@
     }
 
     if (window.JustagramBlocker.isBlocked(url)) {
+      blockedRequest = true;
       return createErrorResponse(url);
     }
 
@@ -78,6 +83,7 @@
   window.XMLHttpRequest.prototype.send = function (...args: any[]) {
     const url = (this as any)._url;
     if (url && window.JustagramBlocker.isBlocked(url)) {
+       blockedRequest = true;
        console.log('[JustAgram] 🛑 Blocked XHR:', url);
        
       // error response
